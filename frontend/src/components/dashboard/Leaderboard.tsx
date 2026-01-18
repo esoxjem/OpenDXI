@@ -17,6 +17,7 @@ import type { DeveloperMetrics, SortKey } from "@/types/metrics";
 
 interface LeaderboardProps {
   developers: DeveloperMetrics[];
+  onSelectDeveloper?: (developerName: string) => void;
 }
 
 const sortButtons: { key: SortKey; label: string }[] = [
@@ -32,7 +33,7 @@ function getDxiBadgeVariant(score: number): "default" | "secondary" | "destructi
   return "destructive";
 }
 
-export function Leaderboard({ developers }: LeaderboardProps) {
+export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>("dxi_score");
 
   const sortedDevelopers = useMemo(() => {
@@ -102,7 +103,10 @@ export function Leaderboard({ developers }: LeaderboardProps) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="border-b transition-colors hover:bg-muted/50"
+                    className={`border-b transition-colors hover:bg-muted/50 ${
+                      onSelectDeveloper ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => onSelectDeveloper?.(dev.developer)}
                   >
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell className="font-medium">{dev.developer}</TableCell>
