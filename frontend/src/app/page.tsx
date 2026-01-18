@@ -1,0 +1,169 @@
+"use client";
+
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { useConfig, useSprints, useMetrics, useRefreshMetrics } from "@/hooks/useMetrics";
+import { SprintSelector } from "@/components/dashboard/SprintSelector";
+import { KpiCard } from "@/components/dashboard/KpiCard";
+import { ActivityChart } from "@/components/dashboard/ActivityChart";
+import { DxiRadarChart } from "@/components/dashboard/DxiRadarChart";
+import { Leaderboard } from "@/components/dashboard/Leaderboard";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+
+function DashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sprintParam = searchParams.get("sprint");
+
+  const { data: config } = useConfig();
+  const { data: sprints, isLoading: sprintsLoading } = useSprints();
+  const refreshMutation = useRefreshMetrics();
+
+  // Use URL param or default to first (current) sprint
+  const selectedSprint = sprintParam || sprints?.[0]?.value;
+  const [startDate, endDate] = selectedSprint?.split("|") || [];
+
+  const { data: metrics, isLoading: metricsLoading, error } = useMetrics(
+    startDate,
+    endDate
+  );
+
+  const handleSprintChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("sprint", value);
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleRefresh = () => {
+    if (startDate && endDate) {
+      refreshMutation.mutate({ start: startDate, end: endDate });
+    }
+  };
+
+  // Loading state
+  if (sprintsLoading || (metricsLoading && !metrics)) {
+    return <DashboardSkeleton />;
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <h2 className="text-xl font-semibold mb-2">Failed to load metrics</h2>
+        <p className="text-muted-foreground mb-4">
+          {error instanceof Error ? error.message : "An error occurred"}
+        </p>
+        <Button onClick={handleRefresh}>Retry</Button>
+      </div>
+    );
+  }
+
+  // Calculate KPI values
+  const summary = metrics?.summary || {
+    total_commits: 0,
+    total_prs: 0,
+    total_merged: 0,
+    total_reviews: 0,
+    avg_dxi_score: 0,
+  };
+  const developers = metrics?.developers || [];
+  const daily = metrics?.daily || [];
+
+  // Calculate average cycle time and review time
+  const cycleTimes = developers
+    .map((d) => d.avg_cycle_time_hours)
+    .filter((v): v is number => v !== null);
+  const avgCycle = cycleTimes.length
+    ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length
+    : 0;
+
+  const reviewTimes = developers
+    .map((d) => d.avg_review_time_hours)
+    .filter((v): v is number => v !== null);
+  const avgReview = reviewTimes.length
+    ? reviewTimes.reduce((a, b) => a + b, 0) / reviewTimes.length
+    : 0;
+
+  // Sparkline data
+  const commitSparkline = daily.map((d) => d.commits);
+  const prSparkline = daily.map((d) => d.prs_merged);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {config?.github_org || "OpenDXI"} DXI Dashboard
+          </h1>
+          <p className="text-muted-foreground">Developer Experience Index</p>
+        </div>
+        <div className="flex gap-2">
+          {sprints && (
+            <SprintSelector
+              sprints={sprints}
+              value={selectedSprint}
+              onValueChange={handleSprintChange}
+            />
+          )}
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+          >
+            {refreshMutation.isPending ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="DXI Score"
+          value={summary.avg_dxi_score.toFixed(0)}
+          sparklineData={developers.slice(0, 10).map((d) => d.dxi_score)}
+          index={0}
+        />
+        <KpiCard
+          title="Commits"
+          value={summary.total_commits.toString()}
+          sparklineData={commitSparkline}
+          index={1}
+        />
+        <KpiCard
+          title="PR Cycle Time"
+          value={avgCycle > 0 ? `${avgCycle.toFixed(1)}h` : "--"}
+          sparklineData={prSparkline}
+          index={2}
+        />
+        <KpiCard
+          title="Review Time"
+          value={avgReview > 0 ? `${avgReview.toFixed(1)}h` : "--"}
+          index={3}
+        />
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <ActivityChart data={daily} />
+        </div>
+        <DxiRadarChart developers={developers} />
+      </div>
+
+      {/* Leaderboard */}
+      <Leaderboard developers={developers} />
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <main className="container mx-auto py-6 px-4">
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent />
+      </Suspense>
+    </main>
+  );
+}

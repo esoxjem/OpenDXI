@@ -1,0 +1,47 @@
+# Local data
+.data/
+
+# Python
+__pycache__/
+.cache/
+metrics.db
+*.pyc
+.venv/
+venv/
+
+# SQLite transient files (WAL mode)
+*.db-wal
+*.db-shm
+
+# Node
+node_modules/
+.next/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Build
+dist/
+build/
+
+# Documentation
+docs/
+
+# Misc
+*.png
+*.pdf
+.env
+.env.local
+
+# Claude Code
+.claude/**
+CLAUDE.md
+.mcp.json
