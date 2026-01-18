@@ -7,6 +7,16 @@ These models define the contract between the FastAPI backend and React frontend.
 from pydantic import BaseModel
 
 
+class DimensionScores(BaseModel):
+    """Individual dimension scores that make up the DXI composite score."""
+
+    review_speed: float
+    cycle_time: float
+    pr_size: float
+    review_coverage: float
+    commit_frequency: float
+
+
 class DeveloperMetrics(BaseModel):
     """Individual developer metrics for a sprint."""
 
@@ -20,6 +30,7 @@ class DeveloperMetrics(BaseModel):
     avg_review_time_hours: float | None
     avg_cycle_time_hours: float | None
     dxi_score: float
+    dimension_scores: DimensionScores
 
 
 class DailyActivity(BaseModel):
@@ -48,6 +59,7 @@ class MetricsResponse(BaseModel):
     developers: list[DeveloperMetrics]
     daily: list[DailyActivity]
     summary: MetricsSummary
+    team_dimension_scores: DimensionScores
 
 
 class Sprint(BaseModel):

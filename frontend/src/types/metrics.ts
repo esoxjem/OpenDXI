@@ -5,6 +5,14 @@
  * to ensure type-safe communication between frontend and backend.
  */
 
+export interface DimensionScores {
+  review_speed: number;
+  cycle_time: number;
+  pr_size: number;
+  review_coverage: number;
+  commit_frequency: number;
+}
+
 export interface DeveloperMetrics {
   developer: string;
   commits: number;
@@ -16,6 +24,7 @@ export interface DeveloperMetrics {
   avg_review_time_hours: number | null;
   avg_cycle_time_hours: number | null;
   dxi_score: number;
+  dimension_scores: DimensionScores;
 }
 
 export interface DailyActivity {
@@ -38,6 +47,7 @@ export interface MetricsResponse {
   developers: DeveloperMetrics[];
   daily: DailyActivity[];
   summary: MetricsSummary;
+  team_dimension_scores: DimensionScores;
 }
 
 export interface Sprint {

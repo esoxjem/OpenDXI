@@ -149,7 +149,7 @@ function DashboardContent() {
         <div className="lg:col-span-2">
           <ActivityChart data={daily} />
         </div>
-        <DxiRadarChart developers={developers} />
+        <DxiRadarChart teamDimensionScores={metrics?.team_dimension_scores} />
       </div>
 
       {/* Leaderboard */}

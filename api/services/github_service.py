@@ -505,6 +505,7 @@ def process_graphql_response(data: dict, since_date: str) -> dict:
             "avg_cycle_time_hours": avg_cycle_time,
         }
         dev_metrics["dxi_score"] = metrics_service.calculate_dxi_score(dev_metrics)
+        dev_metrics["dimension_scores"] = metrics_service.calculate_developer_dimension_scores(dev_metrics)
         developers.append(dev_metrics)
 
     # Sort by DXI score
@@ -512,6 +513,9 @@ def process_graphql_response(data: dict, since_date: str) -> dict:
 
     # Convert daily stats to sorted list
     daily_list = [{"date": date, **stats} for date, stats in sorted(daily_stats.items())]
+
+    # Calculate team-level dimension scores
+    team_dimension_scores = metrics_service.calculate_dimension_scores(developers)
 
     return {
         "developers": developers,
@@ -523,6 +527,7 @@ def process_graphql_response(data: dict, since_date: str) -> dict:
             "total_reviews": sum(d["reviews_given"] for d in developers),
             "avg_dxi_score": sum(d["dxi_score"] for d in developers) / len(developers) if developers else 0,
         },
+        "team_dimension_scores": team_dimension_scores,
     }
 
 
@@ -669,6 +674,7 @@ def process_paginated_data(prs: list[dict], commits: list[dict], since_date: str
             "avg_cycle_time_hours": avg_cycle_time,
         }
         dev_metrics["dxi_score"] = metrics_service.calculate_dxi_score(dev_metrics)
+        dev_metrics["dimension_scores"] = metrics_service.calculate_developer_dimension_scores(dev_metrics)
         developers.append(dev_metrics)
 
     # Sort by DXI score
@@ -676,6 +682,9 @@ def process_paginated_data(prs: list[dict], commits: list[dict], since_date: str
 
     # Convert daily stats to sorted list
     daily_list = [{"date": date, **stats} for date, stats in sorted(daily_stats.items())]
+
+    # Calculate team-level dimension scores
+    team_dimension_scores = metrics_service.calculate_dimension_scores(developers)
 
     return {
         "developers": developers,
@@ -687,6 +696,7 @@ def process_paginated_data(prs: list[dict], commits: list[dict], since_date: str
             "total_reviews": sum(d["reviews_given"] for d in developers),
             "avg_dxi_score": sum(d["dxi_score"] for d in developers) / len(developers) if developers else 0,
         },
+        "team_dimension_scores": team_dimension_scores,
     }
 
 

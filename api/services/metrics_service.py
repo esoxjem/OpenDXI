@@ -10,6 +10,53 @@ Implements the Developer Experience Index scoring algorithm with five weighted d
 """
 
 
+def calculate_developer_dimension_scores(metrics: dict) -> dict:
+    """
+    Calculate individual dimension scores for a developer.
+
+    This breaks down the DXI score into its component dimensions,
+    allowing identification of which areas need improvement.
+
+    Args:
+        metrics: Dictionary containing developer activity metrics
+
+    Returns:
+        Dictionary with score for each DXI dimension (0-100)
+    """
+    # Extract raw values with sensible defaults
+    review_time = metrics.get("avg_review_time_hours") or 24
+    cycle_time = metrics.get("avg_cycle_time_hours") or 48
+    lines_changed = (metrics.get("lines_added", 0) or 0) + (metrics.get("lines_deleted", 0) or 0)
+    prs_opened = metrics.get("prs_opened", 0) or 1
+    avg_pr_size = lines_changed / max(prs_opened, 1)
+    reviews = metrics.get("reviews_given", 0) or 0
+    commits = metrics.get("commits", 0) or 0
+
+    # Normalize to 0-100 scores with thresholds from CLAUDE.md
+    # Review turnaround: <2h = 100, >24h = 0
+    review_score = max(0, min(100, 100 - (review_time - 2) * (100 / 22)))
+
+    # Cycle time: <8h = 100, >72h = 0
+    cycle_score = max(0, min(100, 100 - (cycle_time - 8) * (100 / 64)))
+
+    # PR size: <200 lines = 100, >1000 lines = 0
+    size_score = max(0, min(100, 100 - (avg_pr_size - 200) * (100 / 800)))
+
+    # Reviews: 10+ = 100, 0 = 0 (per sprint)
+    review_cov_score = min(100, reviews * 10)
+
+    # Commits: 20+ = 100, 0 = 0 (per sprint)
+    commit_score = min(100, commits * 5)
+
+    return {
+        "review_speed": round(review_score, 1),
+        "cycle_time": round(cycle_score, 1),
+        "pr_size": round(size_score, 1),
+        "review_coverage": round(review_cov_score, 1),
+        "commit_frequency": round(commit_score, 1),
+    }
+
+
 def calculate_dxi_score(metrics: dict) -> float:
     """
     Calculate DXI composite score from developer metrics.
