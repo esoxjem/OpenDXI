@@ -4,7 +4,14 @@
  * All API calls are centralized here for easy configuration and error handling.
  */
 
-import type { ConfigResponse, MetricsResponse, Sprint, SprintListResponse } from "@/types/metrics";
+import type {
+  ConfigResponse,
+  MetricsResponse,
+  Sprint,
+  SprintHistoryEntry,
+  SprintHistoryResponse,
+  SprintListResponse,
+} from "@/types/metrics";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -53,4 +60,21 @@ export async function fetchMetrics(
     throw new Error("Failed to fetch metrics");
   }
   return res.json();
+}
+
+/**
+ * Fetch historical DXI scores across multiple sprints.
+ *
+ * @param count - Number of sprints to include (default 6)
+ */
+export async function fetchSprintHistory(count = 6): Promise<SprintHistoryEntry[]> {
+  const url = new URL(`${API_BASE}/api/sprints/history`);
+  url.searchParams.set("count", count.toString());
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error("Failed to fetch sprint history");
+  }
+  const data: SprintHistoryResponse = await res.json();
+  return data.sprints;
 }

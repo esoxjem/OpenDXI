@@ -89,3 +89,22 @@ class ConfigResponse(BaseModel):
     """Application configuration exposed to frontend."""
 
     github_org: str
+
+
+class SprintHistoryEntry(BaseModel):
+    """Single sprint entry for historical trend analysis."""
+
+    sprint_label: str
+    start_date: str
+    end_date: str
+    avg_dxi_score: float
+    dimension_scores: DimensionScores
+    developer_count: int
+    total_commits: int
+    total_prs: int
+
+
+class SprintHistoryResponse(BaseModel):
+    """Historical DXI scores across multiple sprints for trend analysis."""
+
+    sprints: list[SprintHistoryEntry]

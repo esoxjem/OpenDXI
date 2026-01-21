@@ -69,3 +69,20 @@ export type SortKey = "dxi_score" | "commits" | "prs_opened" | "reviews_given";
 export interface ConfigResponse {
   github_org: string;
 }
+
+/** Single sprint entry for historical trend analysis */
+export interface SprintHistoryEntry {
+  sprint_label: string;
+  start_date: string;
+  end_date: string;
+  avg_dxi_score: number;
+  dimension_scores: DimensionScores;
+  developer_count: number;
+  total_commits: number;
+  total_prs: number;
+}
+
+/** Historical DXI scores across multiple sprints */
+export interface SprintHistoryResponse {
+  sprints: SprintHistoryEntry[];
+}

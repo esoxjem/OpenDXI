@@ -1,10 +1,16 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useCallback } from "react";
+import { Suspense, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useConfig, useSprints, useMetrics, useRefreshMetrics } from "@/hooks/useMetrics";
+import {
+  useConfig,
+  useSprints,
+  useMetrics,
+  useRefreshMetrics,
+  useSprintHistory,
+} from "@/hooks/useMetrics";
 import { SprintSelector } from "@/components/dashboard/SprintSelector";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
@@ -13,6 +19,7 @@ import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
+import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
 
 function DashboardContent() {
   const router = useRouter();
@@ -29,10 +36,39 @@ function DashboardContent() {
   const selectedSprint = sprintParam || sprints?.[0]?.value;
   const [startDate, endDate] = selectedSprint?.split("|") || [];
 
-  const { data: metrics, isLoading: metricsLoading, error } = useMetrics(
-    startDate,
-    endDate
-  );
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    error,
+  } = useMetrics(startDate, endDate);
+  const { data: sprintHistory, isLoading: historyLoading } =
+    useSprintHistory(6);
+
+  // Calculate previous sprint metrics for trend indicators
+  const previousSprintMetrics = useMemo(() => {
+    if (!sprintHistory || sprintHistory.length < 2) return null;
+
+    // Find the current sprint index in history
+    const currentSprintIndex = sprintHistory.findIndex(
+      (s) => s.start_date === startDate && s.end_date === endDate,
+    );
+
+    // If current sprint is in history and has a previous sprint
+    if (currentSprintIndex > 0) {
+      return sprintHistory[currentSprintIndex - 1];
+    }
+
+    // If current sprint is most recent (not in history yet or is latest)
+    // Use second-to-last from history as "previous"
+    if (
+      currentSprintIndex === -1 ||
+      currentSprintIndex === sprintHistory.length - 1
+    ) {
+      return sprintHistory[sprintHistory.length - 2] || null;
+    }
+
+    return null;
+  }, [sprintHistory, startDate, endDate]);
 
   const updateUrlParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -46,7 +82,7 @@ function DashboardContent() {
       }
       router.push(`?${params.toString()}`);
     },
-    [router, searchParams]
+    [router, searchParams],
   );
 
   const handleSprintChange = (value: string) => {
@@ -116,6 +152,16 @@ function DashboardContent() {
     ? reviewTimes.reduce((a, b) => a + b, 0) / reviewTimes.length
     : 0;
 
+  // Previous sprint values for trends
+  const prevDxi = previousSprintMetrics?.avg_dxi_score;
+  const prevCommits = previousSprintMetrics?.total_commits;
+  // For cycle time and review time, we'd need to recalculate from history
+  // For now, use dimension scores as proxy (higher score = better time)
+  const prevCycleScore = previousSprintMetrics?.dimension_scores?.cycle_time;
+  const currentCycleScore = teamScores?.cycle_time;
+  const prevReviewScore = previousSprintMetrics?.dimension_scores?.review_speed;
+  const currentReviewScore = teamScores?.review_speed;
+
   // Sparkline data
   const commitSparkline = daily.map((d) => d.commits);
   const prSparkline = daily.map((d) => d.prs_merged);
@@ -158,6 +204,7 @@ function DashboardContent() {
         <TabsList>
           <TabsTrigger value="team">Team Overview</TabsTrigger>
           <TabsTrigger value="developers">Developers</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         {/* Team Overview Tab */}
@@ -169,23 +216,33 @@ function DashboardContent() {
               value={summary.avg_dxi_score.toFixed(0)}
               sparklineData={developers.slice(0, 10).map((d) => d.dxi_score)}
               index={0}
+              currentValue={summary.avg_dxi_score}
+              previousValue={prevDxi}
             />
             <KpiCard
               title="Commits"
               value={summary.total_commits.toString()}
               sparklineData={commitSparkline}
               index={1}
+              currentValue={summary.total_commits}
+              previousValue={prevCommits}
             />
             <KpiCard
               title="PR Cycle Time"
               value={avgCycle > 0 ? `${avgCycle.toFixed(1)}h` : "--"}
               sparklineData={prSparkline}
               index={2}
+              currentValue={currentCycleScore}
+              previousValue={prevCycleScore}
+              invertTrend={false} // Higher score is better
             />
             <KpiCard
               title="Review Time"
               value={avgReview > 0 ? `${avgReview.toFixed(1)}h` : "--"}
               index={3}
+              currentValue={currentReviewScore}
+              previousValue={prevReviewScore}
+              invertTrend={false} // Higher score is better
             />
           </div>
 
@@ -228,6 +285,53 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+          )}
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-6">
+          {historyLoading ? (
+            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+              Loading historical data...
+            </div>
+          ) : (
+            <>
+              <DxiTrendChart data={sprintHistory || []} />
+              {/* Summary stats for historical context */}
+              {sprintHistory && sprintHistory.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Sprints Analyzed
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {sprintHistory.length}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Avg Developer Count
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {Math.round(
+                        sprintHistory.reduce(
+                          (sum, s) => sum + s.developer_count,
+                          0,
+                        ) / sprintHistory.length,
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Total PRs (All Sprints)
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {sprintHistory.reduce((sum, s) => sum + s.total_prs, 0)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
