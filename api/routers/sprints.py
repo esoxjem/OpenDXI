@@ -4,9 +4,17 @@ Sprint and metrics endpoints.
 Provides endpoints for fetching sprint metadata and developer metrics.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Query
 
-from api.models.schemas import MetricsResponse, Sprint, SprintListResponse
+from api.models.schemas import (
+    MetricsResponse,
+    Sprint,
+    SprintHistoryEntry,
+    SprintHistoryResponse,
+    SprintListResponse,
+)
 from api.services import github_service, metrics_service
 
 router = APIRouter(prefix="/sprints", tags=["sprints"])
@@ -40,6 +48,62 @@ async def list_sprints() -> SprintListResponse:
     sprints_data = github_service.get_all_sprints()
     sprints = [Sprint(**s) for s in sprints_data]
     return SprintListResponse(sprints=sprints)
+
+
+@router.get("/history", response_model=SprintHistoryResponse)
+async def get_sprint_history(
+    count: int = Query(6, ge=1, le=12, description="Number of sprints to include"),
+) -> SprintHistoryResponse:
+    """
+    Get historical DXI scores across multiple sprints for trend analysis.
+
+    Returns aggregated team metrics for the last N sprints, ordered from
+    oldest to newest for chronological charting.
+
+    Args:
+        count: Number of sprints to include (1-12, default 6)
+    """
+    sprints_data = github_service.get_all_sprints(limit=count)
+    history_entries = []
+
+    for sprint in sprints_data:
+        start_date = sprint["start"]
+        end_date = sprint["end"]
+
+        # Fetch metrics for this sprint (uses cache if available)
+        metrics = github_service.get_metrics_for_sprint(start_date, end_date, force_refresh=False)
+        metrics = ensure_dimension_scores(metrics)
+
+        # Calculate team dimension scores
+        developers = metrics.get("developers", [])
+        summary = metrics.get("summary", {})
+        team_scores = metrics.get("team_dimension_scores", {})
+
+        # Create short sprint label (e.g., "Jan 7-20")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        if start_dt.month == end_dt.month:
+            label = f"{start_dt.strftime('%b')} {start_dt.day}-{end_dt.day}"
+        else:
+            label = f"{start_dt.strftime('%b %d')}-{end_dt.strftime('%b %d')}"
+
+        history_entries.append(
+            SprintHistoryEntry(
+                sprint_label=label,
+                start_date=start_date,
+                end_date=end_date,
+                avg_dxi_score=summary.get("avg_dxi_score", 0),
+                dimension_scores=team_scores,
+                developer_count=len(developers),
+                total_commits=summary.get("total_commits", 0),
+                total_prs=summary.get("total_prs", 0),
+            )
+        )
+
+    # Reverse to chronological order (oldest first) for charting
+    history_entries.reverse()
+
+    return SprintHistoryResponse(sprints=history_entries)
 
 
 @router.get("/{start_date}/{end_date}/metrics", response_model=MetricsResponse)

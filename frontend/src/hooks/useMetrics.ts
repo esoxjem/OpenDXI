@@ -8,7 +8,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchConfig, fetchSprints, fetchMetrics } from "@/lib/api";
+import { fetchConfig, fetchSprints, fetchMetrics, fetchSprintHistory } from "@/lib/api";
 
 /**
  * Hook to fetch application configuration.
@@ -61,5 +61,17 @@ export function useRefreshMetrics() {
       // Update the cache with fresh data
       queryClient.setQueryData(["metrics", start, end], data);
     },
+  });
+}
+
+/**
+ * Hook to fetch historical DXI scores across multiple sprints.
+ * Uses 1 hour stale time since historical data changes infrequently.
+ */
+export function useSprintHistory(count = 6) {
+  return useQuery({
+    queryKey: ["sprintHistory", count],
+    queryFn: () => fetchSprintHistory(count),
+    staleTime: 1000 * 60 * 60, // 1 hour
   });
 }
