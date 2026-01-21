@@ -1,18 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, ReferenceLine } from "recharts";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import type { SprintHistoryEntry } from "@/types/metrics";
 
 interface DxiTrendChartProps {
@@ -22,32 +18,71 @@ interface DxiTrendChartProps {
 const chartConfig = {
   avg_dxi_score: {
     label: "DXI Score",
-    color: "hsl(210, 70%, 55%)",
+    color: "oklch(0.55 0.2 250)",
   },
   review_speed: {
     label: "Review Speed",
-    color: "hsl(142, 60%, 50%)",
+    color: "oklch(0.65 0.2 145)",
   },
   cycle_time: {
     label: "Cycle Time",
-    color: "hsl(280, 60%, 55%)",
+    color: "oklch(0.55 0.2 300)",
   },
   pr_size: {
     label: "PR Size",
-    color: "hsl(25, 80%, 55%)",
+    color: "oklch(0.7 0.2 55)",
   },
   review_coverage: {
     label: "Review Coverage",
-    color: "hsl(340, 70%, 55%)",
+    color: "oklch(0.6 0.2 10)",
   },
   commit_frequency: {
     label: "Commit Frequency",
-    color: "hsl(180, 60%, 45%)",
+    color: "oklch(0.6 0.15 195)",
   },
 } satisfies ChartConfig;
 
+type DimensionKey = keyof typeof chartConfig;
+
+const dimensionKeys: DimensionKey[] = [
+  "review_speed",
+  "cycle_time",
+  "pr_size",
+  "review_coverage",
+  "commit_frequency",
+];
+
 export function DxiTrendChart({ data }: DxiTrendChartProps) {
-  const [showDimensions, setShowDimensions] = useState(false);
+  // Track which lines are visible - DXI Score always on, dimensions start hidden
+  const [visibleLines, setVisibleLines] = useState<Set<DimensionKey>>(
+    new Set(["avg_dxi_score"])
+  );
+
+  const toggleLine = useCallback((key: DimensionKey) => {
+    // Don't allow toggling off the main DXI score
+    if (key === "avg_dxi_score") return;
+
+    setVisibleLines((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAllDimensions = useCallback(() => {
+    setVisibleLines((prev) => {
+      const hasAllDimensions = dimensionKeys.every((k) => prev.has(k));
+      const next = new Set<DimensionKey>(["avg_dxi_score"]);
+      if (!hasAllDimensions) {
+        dimensionKeys.forEach((k) => next.add(k));
+      }
+      return next;
+    });
+  }, []);
 
   if (!data.length) {
     return (
@@ -71,9 +106,6 @@ export function DxiTrendChart({ data }: DxiTrendChartProps) {
     pr_size: sprint.dimension_scores.pr_size,
     review_coverage: sprint.dimension_scores.review_coverage,
     commit_frequency: sprint.dimension_scores.commit_frequency,
-    developer_count: sprint.developer_count,
-    total_commits: sprint.total_commits,
-    total_prs: sprint.total_prs,
   }));
 
   // Calculate trend direction
@@ -82,6 +114,9 @@ export function DxiTrendChart({ data }: DxiTrendChartProps) {
   const trend = lastScore - firstScore;
   const trendLabel = trend > 0 ? `+${trend.toFixed(1)}` : trend.toFixed(1);
   const trendColor = trend >= 0 ? "text-green-600" : "text-red-600";
+
+  const hasAllDimensions = dimensionKeys.every((k) => visibleLines.has(k));
+  const hasNoDimensions = !dimensionKeys.some((k) => visibleLines.has(k));
 
   return (
     <Card>
@@ -92,16 +127,6 @@ export function DxiTrendChart({ data }: DxiTrendChartProps) {
             Overall trend:{" "}
             <span className={`font-semibold ${trendColor}`}>{trendLabel}</span>
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="show-dimensions"
-            checked={showDimensions}
-            onCheckedChange={setShowDimensions}
-          />
-          <Label htmlFor="show-dimensions" className="text-sm">
-            Show dimensions
-          </Label>
         </div>
       </CardHeader>
       <CardContent>
@@ -123,15 +148,15 @@ export function DxiTrendChart({ data }: DxiTrendChartProps) {
             {/* Reference lines for score thresholds */}
             <ReferenceLine
               y={70}
-              stroke="hsl(142, 60%, 50%)"
+              stroke="oklch(0.65 0.2 145)"
               strokeDasharray="3 3"
-              strokeOpacity={0.5}
+              strokeOpacity={0.3}
             />
             <ReferenceLine
               y={50}
-              stroke="hsl(45, 80%, 50%)"
+              stroke="oklch(0.8 0.15 85)"
               strokeDasharray="3 3"
-              strokeOpacity={0.5}
+              strokeOpacity={0.3}
             />
             <ChartTooltip
               content={
@@ -147,63 +172,106 @@ export function DxiTrendChart({ data }: DxiTrendChartProps) {
                 />
               }
             />
-            <ChartLegend content={<ChartLegendContent />} />
             {/* Main DXI Score line - always visible */}
             <Line
               type="monotone"
               dataKey="avg_dxi_score"
-              stroke="hsl(210, 70%, 55%)"
+              stroke="var(--color-avg_dxi_score)"
               strokeWidth={3}
-              dot={{ fill: "hsl(210, 70%, 55%)", r: 4 }}
+              dot={{ fill: "var(--color-avg_dxi_score)", r: 4 }}
               activeDot={{ r: 6 }}
             />
-            {/* Dimension lines - toggleable */}
-            {showDimensions && (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="review_speed"
-                  stroke="hsl(142, 60%, 50%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cycle_time"
-                  stroke="hsl(280, 60%, 55%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pr_size"
-                  stroke="hsl(25, 80%, 55%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="review_coverage"
-                  stroke="hsl(340, 70%, 55%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="commit_frequency"
-                  stroke="hsl(180, 60%, 45%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  dot={false}
-                />
-              </>
-            )}
+            {/* Dimension lines - individually toggleable */}
+            <Line
+              type="monotone"
+              dataKey="review_speed"
+              stroke="var(--color-review_speed)"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              hide={!visibleLines.has("review_speed")}
+            />
+            <Line
+              type="monotone"
+              dataKey="cycle_time"
+              stroke="var(--color-cycle_time)"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              hide={!visibleLines.has("cycle_time")}
+            />
+            <Line
+              type="monotone"
+              dataKey="pr_size"
+              stroke="var(--color-pr_size)"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              hide={!visibleLines.has("pr_size")}
+            />
+            <Line
+              type="monotone"
+              dataKey="review_coverage"
+              stroke="var(--color-review_coverage)"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              hide={!visibleLines.has("review_coverage")}
+            />
+            <Line
+              type="monotone"
+              dataKey="commit_frequency"
+              stroke="var(--color-commit_frequency)"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              hide={!visibleLines.has("commit_frequency")}
+            />
           </LineChart>
         </ChartContainer>
+
+        {/* Interactive Legend */}
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+          {/* DXI Score - always active */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className="h-3 w-3 rounded-sm"
+              style={{ backgroundColor: "var(--color-avg_dxi_score)" }}
+            />
+            <span className="text-sm font-medium">
+              {chartConfig.avg_dxi_score.label}
+            </span>
+          </div>
+
+          {/* Toggle all dimensions */}
+          <button
+            onClick={toggleAllDimensions}
+            className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+          >
+            {hasAllDimensions ? "Hide all" : hasNoDimensions ? "Show all" : "Toggle all"}
+          </button>
+
+          {/* Dimension toggles */}
+          {dimensionKeys.map((key) => {
+            const config = chartConfig[key];
+            const isActive = visibleLines.has(key);
+            return (
+              <button
+                key={key}
+                onClick={() => toggleLine(key)}
+                className={`flex items-center gap-1.5 transition-opacity ${
+                  isActive ? "opacity-100" : "opacity-40 hover:opacity-70"
+                }`}
+              >
+                <div
+                  className="h-3 w-3 rounded-sm"
+                  style={{ backgroundColor: `var(--color-${key})` }}
+                />
+                <span className="text-sm">{config.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
