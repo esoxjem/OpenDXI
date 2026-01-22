@@ -31,9 +31,6 @@ next-env.d.ts
 dist/
 build/
 
-# Documentation
-docs/
-
 # Misc
 *.png
 *.pdf
@@ -42,5 +39,5 @@ docs/
 
 # Claude Code
 .claude/**
-CLAUDE.md
 .mcp.json
+CLAUDE.md

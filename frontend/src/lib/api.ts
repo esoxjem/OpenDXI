@@ -1,5 +1,5 @@
 /**
- * API client for the OpenDXI Dashboard FastAPI backend.
+ * API client for the OpenDXI Dashboard Rails backend.
  *
  * All API calls are centralized here for easy configuration and error handling.
  */
@@ -14,7 +14,7 @@ import type {
   SprintListResponse,
 } from "@/types/metrics";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 /**
  * Fetch application configuration.
