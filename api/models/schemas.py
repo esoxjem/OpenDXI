@@ -108,3 +108,29 @@ class SprintHistoryResponse(BaseModel):
     """Historical DXI scores across multiple sprints for trend analysis."""
 
     sprints: list[SprintHistoryEntry]
+
+
+class DeveloperHistoryEntry(BaseModel):
+    """Single sprint entry for a developer's historical trend analysis."""
+
+    sprint_label: str
+    start_date: str
+    end_date: str
+    dxi_score: float
+    dimension_scores: DimensionScores
+    commits: int
+    prs_opened: int
+    prs_merged: int
+    reviews_given: int
+    lines_added: int
+    lines_deleted: int
+    avg_review_time_hours: float | None
+    avg_cycle_time_hours: float | None
+
+
+class DeveloperHistoryResponse(BaseModel):
+    """Historical metrics for a specific developer across multiple sprints."""
+
+    developer: str
+    sprints: list[DeveloperHistoryEntry]
+    team_history: list[SprintHistoryEntry]
