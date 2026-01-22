@@ -28,6 +28,12 @@ npm run lint       # ESLint
 
 Note: Configure `NEXT_PUBLIC_API_URL=http://localhost:3000` for frontend to connect to Rails.
 
+### Browser Testing
+- **Test target**: `http://localhost:3001` (Next.js frontend)
+- **NOT**: `http://localhost:3000` (Rails API only, no user-facing UI)
+- Rails at port 3000 serves JSON API endpoints only
+- Use `/test-browser` skill for end-to-end browser testing
+
 ### Prerequisites
 - Ruby 3.3+
 - Node.js 18+

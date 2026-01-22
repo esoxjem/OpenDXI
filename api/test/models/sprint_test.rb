@@ -206,8 +206,8 @@ class SprintTest < ActiveSupport::TestCase
         }
       ],
       "daily_activity" => [
-        { "date" => "2026-01-07", "commits" => 5, "prs_merged" => 1, "reviews_given" => 3 },
-        { "date" => "2026-01-08", "commits" => 8, "prs_merged" => 2, "reviews_given" => 5 }
+        { "date" => "2026-01-07", "commits" => 5, "prs_opened" => 2, "prs_merged" => 1, "reviews_given" => 3 },
+        { "date" => "2026-01-08", "commits" => 8, "prs_opened" => 3, "prs_merged" => 2, "reviews_given" => 5 }
       ],
       "summary" => {
         "total_commits" => 30,
