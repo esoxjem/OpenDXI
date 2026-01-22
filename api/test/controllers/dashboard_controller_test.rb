@@ -55,6 +55,35 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_match "turbo-stream", response.content_type
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # View Parameter Whitelist (P1-003)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test "show defaults to team view for invalid view parameter" do
+    get dashboard_path(view: "invalid", sprint: @sprint.date_range_param)
+    assert_response :success
+    # Should render team tab, not fail or render invalid partial
+    assert_select "[data-testid='kpi-card']", minimum: 4
+  end
+
+  test "show defaults to team view for path traversal attempt" do
+    get dashboard_path(view: "../../../etc/passwd", sprint: @sprint.date_range_param)
+    assert_response :success
+    # Should safely fall back to team view
+    assert_select "[data-testid='kpi-card']", minimum: 4
+  end
+
+  test "show allows valid team view" do
+    get dashboard_path(view: "team", sprint: @sprint.date_range_param)
+    assert_response :success
+  end
+
+  test "show allows valid developers view" do
+    get dashboard_path(view: "developers", sprint: @sprint.date_range_param)
+    assert_response :success
+    assert_select "table"
+  end
+
   private
 
   def sample_sprint_data

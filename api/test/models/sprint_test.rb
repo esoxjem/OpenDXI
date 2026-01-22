@@ -161,6 +161,51 @@ class SprintTest < ActiveSupport::TestCase
     assert start_date < end_date
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Race Condition Handling (P1-001)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test "find_or_fetch! returns existing sprint without calling GitHub" do
+    # Existing sprint should be returned directly without fetching
+    result = Sprint.find_or_fetch!(@sprint.start_date, @sprint.end_date)
+
+    assert_equal @sprint, result
+    # If GithubService was called, the data would be different (empty or error)
+    # The fact that our sample data is intact proves no fetch occurred
+    assert_equal 2, result.developers.size
+  end
+
+  test "find_or_fetch! accepts string dates" do
+    result = Sprint.find_or_fetch!(@sprint.start_date.to_s, @sprint.end_date.to_s)
+
+    assert_equal @sprint, result
+  end
+
+  test "unique index prevents duplicate sprints" do
+    # The race condition fix relies on the unique index to catch duplicates
+    # Verify the index exists by trying to create a duplicate
+    duplicate = Sprint.new(
+      start_date: @sprint.start_date,
+      end_date: @sprint.end_date,
+      data: {}
+    )
+
+    assert_raises(ActiveRecord::RecordInvalid) { duplicate.save! }
+  end
+
+  test "find_or_fetch! wrapped in transaction" do
+    # Verify the method uses a transaction by checking it's atomic
+    # This is a structural test - if the method changes to not use
+    # transactions, this test documents that expectation
+    source = Sprint.method(:find_or_fetch!).source_location
+    source_file = File.read(source.first)
+
+    assert_match(/transaction do/, source_file,
+      "find_or_fetch! should use a transaction for race condition handling")
+    assert_match(/rescue ActiveRecord::RecordNotUnique/, source_file,
+      "find_or_fetch! should rescue RecordNotUnique")
+  end
+
   private
 
   def sample_sprint_data

@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 class DashboardController < ApplicationController
+  ALLOWED_VIEWS = %w[team developers].freeze
+
   def show
     @sprint = find_or_current_sprint
     @sprints = Sprint.available_sprints
-    @view = params[:view] || "team"
+    @view = allowed_view
     @sort_by = params[:sort] || "dxi_score"
     @sort_dir = params[:dir] || "desc"
   end
@@ -13,7 +15,7 @@ class DashboardController < ApplicationController
     start_date, end_date = parse_sprint_dates
     @sprint = Sprint.find_or_fetch!(start_date, end_date, force: true)
     @sprints = Sprint.available_sprints
-    @view = params[:view] || "team"
+    @view = allowed_view
     @sort_by = params[:sort] || "dxi_score"
     @sort_dir = params[:dir] || "desc"
 
@@ -77,5 +79,9 @@ class DashboardController < ApplicationController
       end
       format.html { redirect_to dashboard_path, alert: message }
     end
+  end
+
+  def allowed_view
+    ALLOWED_VIEWS.include?(params[:view]) ? params[:view] : "team"
   end
 end

@@ -9,6 +9,7 @@ module Api
     rescue_from ActiveRecord::RecordNotFound, with: :not_found
     rescue_from ActionController::ParameterMissing, with: :bad_request
     rescue_from ArgumentError, with: :bad_request
+    rescue_from Date::Error, with: :bad_request
     rescue_from GithubService::GhCliNotFound, with: :gh_cli_missing
     rescue_from GithubService::RateLimitExceeded, with: :rate_limited
     rescue_from GithubService::AuthenticationError, with: :github_auth_error

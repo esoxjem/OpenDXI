@@ -20,22 +20,29 @@ class Sprint < ApplicationRecord
     end
 
     # Find or fetch sprint data, optionally forcing a refresh
+    #
+    # Uses transaction with retry on RecordNotUnique to handle race conditions
+    # when multiple concurrent requests try to create the same sprint.
     def find_or_fetch!(start_date, end_date, force: false)
       start_date = Date.parse(start_date.to_s)
       end_date = Date.parse(end_date.to_s)
 
-      sprint = find_by_dates(start_date, end_date)
-      return sprint if sprint && !force
+      transaction do
+        sprint = find_by_dates(start_date, end_date)
+        return sprint if sprint && !force
 
-      data = GithubService.fetch_sprint_data(start_date, end_date)
+        data = GithubService.fetch_sprint_data(start_date, end_date)
 
-      if sprint
-        sprint.update!(data: data)
-      else
-        sprint = create!(start_date: start_date, end_date: end_date, data: data)
+        if sprint
+          sprint.update!(data: data)
+          sprint
+        else
+          create!(start_date: start_date, end_date: end_date, data: data)
+        end
       end
-
-      sprint
+    rescue ActiveRecord::RecordNotUnique
+      # Another request created the sprint while we were fetching data
+      find_by_dates(start_date, end_date)
     end
 
     # Calculate current sprint dates based on configuration
