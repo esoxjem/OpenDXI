@@ -148,5 +148,27 @@ module Api
 
       assert_response :not_found
     end
+
+    test "history returns sprints in chronological order (oldest first)" do
+      get "/api/developers/alice/history"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      # Developer history includes both sprints (developer entries) and team_history arrays
+      developer_sprints = json["sprints"]
+      team_history = json["team_history"]
+
+      # Both should be in chronological order (oldest first)
+      # @sprint1 is older (Date.current - 14), @sprint2 is newer (Date.current - 7)
+      assert developer_sprints.length >= 2, "Should have at least 2 sprints"
+
+      # Verify chronological ordering
+      dev_dates = developer_sprints.map { |s| Date.parse(s["start_date"]) }
+      assert_equal dev_dates.sort, dev_dates, "Developer sprints should be in chronological order"
+
+      team_dates = team_history.map { |s| Date.parse(s["start_date"]) }
+      assert_equal team_dates.sort, team_dates, "Team history should be in chronological order"
+    end
   end
 end

@@ -70,6 +70,42 @@ module Api
       assert json.key?("sprints")
     end
 
+    test "history returns sprints in chronological order (oldest first)" do
+      # Create additional sprints with known dates
+      Sprint.destroy_all
+
+      old_sprint = Sprint.create!(
+        start_date: Date.new(2026, 1, 1),
+        end_date: Date.new(2026, 1, 14),
+        data: sample_sprint_data
+      )
+      middle_sprint = Sprint.create!(
+        start_date: Date.new(2026, 1, 15),
+        end_date: Date.new(2026, 1, 28),
+        data: sample_sprint_data
+      )
+      new_sprint = Sprint.create!(
+        start_date: Date.new(2026, 1, 29),
+        end_date: Date.new(2026, 2, 11),
+        data: sample_sprint_data
+      )
+
+      get "/api/sprints/history"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      sprints = json["sprints"]
+
+      # Should be ordered oldest→newest for proper trend display
+      assert_equal 3, sprints.length
+      assert_equal "2026-01-01", sprints.first["start_date"]
+      assert_equal "2026-01-29", sprints.last["start_date"]
+
+      # Verify chronological ordering throughout
+      dates = sprints.map { |s| Date.parse(s["start_date"]) }
+      assert_equal dates.sort, dates, "Sprints should be in chronological order (oldest first)"
+    end
+
     private
 
     def sample_sprint_data
