@@ -1,7 +1,7 @@
 # Sprint Model Coupling to GithubService
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "006"
 tags: [code-review, architecture, rails]
@@ -94,9 +94,9 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] Sprint model can be tested without GithubService
-- [ ] Controllers updated to use new pattern
-- [ ] Existing functionality preserved
+- [x] Sprint model can be tested without GithubService
+- [x] Controllers updated to use new pattern (via existing find_or_fetch! API)
+- [x] Existing functionality preserved
 
 ## Work Log
 

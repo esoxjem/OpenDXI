@@ -29,6 +29,10 @@ class GithubService
     }
   GRAPHQL
 
+  # PRs query with inline reviews (first 20) to eliminate O(PRs) separate API calls.
+  # This is a significant performance optimization - instead of fetching reviews
+  # separately for each PR, we get them in the same query.
+  # Trade-off: Limited to 20 reviews per PR (acceptable for most use cases).
   PRS_QUERY = <<~GRAPHQL
     query($owner: String!, $repo: String!, $cursor: String) {
       repository(owner: $owner, name: $repo) {
@@ -42,22 +46,12 @@ class GithubService
             author { login }
             additions
             deletions
-          }
-        }
-      }
-    }
-  GRAPHQL
-
-  REVIEWS_QUERY = <<~GRAPHQL
-    query($owner: String!, $repo: String!, $prNumber: Int!, $cursor: String) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $prNumber) {
-          reviews(first: 100, after: $cursor) {
-            pageInfo { hasNextPage endCursor }
-            nodes {
-              author { login }
-              submittedAt
-              state
+            reviews(first: 20) {
+              nodes {
+                author { login }
+                submittedAt
+                state
+              }
             }
           }
         }
@@ -110,7 +104,7 @@ class GithubService
       end
       return empty_response if active_repos.empty?
 
-      # Step 3: Fetch PRs for each active repo
+      # Step 3: Fetch PRs for each active repo (reviews are now inline in the query)
       all_prs = []
       active_repos.each do |repo|
         prs = fetch_all_pages(PRS_QUERY, { owner: org, repo: repo["name"] }, %w[repository pullRequests])
@@ -123,17 +117,7 @@ class GithubService
         end
       end
 
-      # Step 4: Fetch reviews for each PR
-      all_prs.each do |pr|
-        reviews = fetch_all_pages(
-          REVIEWS_QUERY,
-          { owner: org, repo: pr["_repo"], prNumber: pr["number"] },
-          %w[repository pullRequest reviews]
-        )
-        pr["reviews"] = { "nodes" => reviews }
-      end
-
-      # Step 5: Fetch commits for each active repo
+      # Step 4: Fetch commits for each active repo
       all_commits = []
       active_repos.each do |repo|
         commits = fetch_all_pages(
@@ -144,8 +128,26 @@ class GithubService
         all_commits.concat(commits)
       end
 
-      # Step 6: Process into dashboard format
+      # Step 5: Process into dashboard format
       aggregate_data(all_prs, all_commits, since_date, until_date)
+    end
+
+    # Returns an empty data structure for sprints with no activity.
+    # Used both internally and by controllers for placeholder sprints.
+    def empty_response
+      {
+        "developers" => [],
+        "daily_activity" => [],
+        "summary" => {
+          "total_commits" => 0,
+          "total_prs" => 0,
+          "total_merged" => 0,
+          "total_reviews" => 0,
+          "developer_count" => 0,
+          "avg_dxi_score" => 0
+        },
+        "team_dimension_scores" => DxiCalculator.team_dimension_scores([])
+      }
     end
 
     private
@@ -161,22 +163,6 @@ class GithubService
 
     def validate_github_org!
       raise GitHubApiError, "GITHUB_ORG environment variable not set" if config.github_org.blank?
-    end
-
-    def empty_response
-      {
-        "developers" => [],
-        "daily_activity" => [],
-        "summary" => {
-          "total_commits" => 0,
-          "total_prs" => 0,
-          "total_merged" => 0,
-          "total_reviews" => 0,
-          "developer_count" => 0,
-          "avg_dxi_score" => 0
-        },
-        "team_dimension_scores" => DxiCalculator.team_dimension_scores([])
-      }
     end
 
     def run_graphql(query, variables)
@@ -232,20 +218,44 @@ class GithubService
       all_nodes
     end
 
+    # Aggregates raw GitHub data into developer metrics and daily activity.
+    # Each step is extracted into a focused private method for testability.
     def aggregate_data(prs, commits, since_date, until_date)
-      developer_stats = Hash.new do |h, k|
+      developer_stats = initialize_developer_stats
+      daily_stats = initialize_daily_stats
+
+      process_commits(commits, developer_stats, daily_stats, since_date, until_date)
+      process_prs(prs, developer_stats, daily_stats, since_date, until_date)
+
+      developers = build_developers_with_scores(developer_stats)
+      daily_activity = build_daily_activity(daily_stats, since_date, until_date)
+      summary = build_summary(developers)
+
+      {
+        "developers" => developers,
+        "daily_activity" => daily_activity,
+        "summary" => summary,
+        "team_dimension_scores" => DxiCalculator.team_dimension_scores(developers).transform_keys(&:to_s)
+      }
+    end
+
+    def initialize_developer_stats
+      Hash.new do |h, k|
         h[k] = {
           "commits" => 0, "prs_opened" => 0, "prs_merged" => 0,
           "reviews_given" => 0, "lines_added" => 0, "lines_deleted" => 0,
           "review_times" => [], "cycle_times" => []
         }
       end
+    end
 
-      daily_stats = Hash.new do |h, k|
+    def initialize_daily_stats
+      Hash.new do |h, k|
         h[k] = { "commits" => 0, "prs_opened" => 0, "prs_merged" => 0, "reviews_given" => 0 }
       end
+    end
 
-      # Process commits
+    def process_commits(commits, developer_stats, daily_stats, since_date, until_date)
       commits.each do |commit|
         author = commit.dig("author") || {}
         login = author.dig("user", "login") || author["name"].to_s
@@ -259,8 +269,9 @@ class GithubService
         developer_stats[login]["lines_deleted"] += commit["deletions"].to_i
         daily_stats[commit_date]["commits"] += 1
       end
+    end
 
-      # Process PRs
+    def process_prs(prs, developer_stats, daily_stats, since_date, until_date)
       prs.each do |pr|
         created_at = pr["createdAt"].to_s
         created_date = created_at[0, 10]
@@ -274,46 +285,49 @@ class GithubService
         developer_stats[author]["lines_deleted"] += pr["deletions"].to_i
         daily_stats[created_date]["prs_opened"] += 1
 
-        # Handle merged PRs
-        merged_at = pr["mergedAt"]
-        if merged_at.present?
-          merged_date = merged_at[0, 10]
-          if merged_date <= until_date
-            developer_stats[author]["prs_merged"] += 1
-            daily_stats[merged_date]["prs_merged"] += 1
-
-            # Calculate cycle time
-            created_time = Time.parse(created_at)
-            merged_time = Time.parse(merged_at)
-            cycle_hours = (merged_time - created_time) / 3600.0
-            developer_stats[author]["cycle_times"] << cycle_hours
-          end
-        end
-
-        # Process reviews
-        reviews = pr.dig("reviews", "nodes") || []
-        reviews.each do |review|
-          reviewer = review.dig("author", "login").to_s
-          next if reviewer.blank? || reviewer.end_with?("[bot]")
-
-          submitted_at = review["submittedAt"]
-          next unless submitted_at.present?
-
-          review_date = submitted_at[0, 10]
-          next if review_date > until_date
-
-          developer_stats[reviewer]["reviews_given"] += 1
-          daily_stats[review_date]["reviews_given"] += 1
-
-          # Calculate review turnaround
-          submitted_time = Time.parse(submitted_at)
-          pr_created_time = Time.parse(created_at)
-          review_hours = (submitted_time - pr_created_time) / 3600.0
-          developer_stats[reviewer]["review_times"] << review_hours if review_hours > 0
-        end
+        process_merged_pr(pr, developer_stats, daily_stats, created_at, author, until_date)
+        process_reviews(pr, developer_stats, daily_stats, created_at, until_date)
       end
+    end
 
-      # Calculate averages and DXI scores
+    def process_merged_pr(pr, developer_stats, daily_stats, created_at, author, until_date)
+      merged_at = pr["mergedAt"]
+      return unless merged_at.present?
+
+      merged_date = merged_at[0, 10]
+      return if merged_date > until_date
+
+      developer_stats[author]["prs_merged"] += 1
+      daily_stats[merged_date]["prs_merged"] += 1
+
+      # Calculate cycle time (PR creation to merge)
+      cycle_hours = (Time.parse(merged_at) - Time.parse(created_at)) / 3600.0
+      developer_stats[author]["cycle_times"] << cycle_hours
+    end
+
+    def process_reviews(pr, developer_stats, daily_stats, pr_created_at, until_date)
+      reviews = pr.dig("reviews", "nodes") || []
+
+      reviews.each do |review|
+        reviewer = review.dig("author", "login").to_s
+        next if reviewer.blank? || reviewer.end_with?("[bot]")
+
+        submitted_at = review["submittedAt"]
+        next unless submitted_at.present?
+
+        review_date = submitted_at[0, 10]
+        next if review_date > until_date
+
+        developer_stats[reviewer]["reviews_given"] += 1
+        daily_stats[review_date]["reviews_given"] += 1
+
+        # Calculate review turnaround (PR creation to first review)
+        review_hours = (Time.parse(submitted_at) - Time.parse(pr_created_at)) / 3600.0
+        developer_stats[reviewer]["review_times"] << review_hours if review_hours > 0
+      end
+    end
+
+    def build_developers_with_scores(developer_stats)
       developers = developer_stats.map do |login, stats|
         avg_review = stats["review_times"].any? ? (stats["review_times"].sum / stats["review_times"].size) : nil
         avg_cycle = stats["cycle_times"].any? ? (stats["cycle_times"].sum / stats["cycle_times"].size) : nil
@@ -339,25 +353,16 @@ class GithubService
 
       # Sort by DXI score descending
       developers.sort_by! { |d| -(d["dxi_score"] || 0) }
+    end
 
-      # Fill missing dates and build daily activity
-      daily_activity = build_daily_activity(daily_stats, since_date, until_date)
-
-      # Build summary
-      summary = {
+    def build_summary(developers)
+      {
         "total_commits" => developers.sum { |d| d["commits"] },
         "total_prs" => developers.sum { |d| d["prs_opened"] },
         "total_merged" => developers.sum { |d| d["prs_merged"] },
         "total_reviews" => developers.sum { |d| d["reviews_given"] },
         "developer_count" => developers.size,
         "avg_dxi_score" => developers.any? ? (developers.sum { |d| d["dxi_score"] } / developers.size.to_f).round(1) : 0
-      }
-
-      {
-        "developers" => developers,
-        "daily_activity" => daily_activity,
-        "summary" => summary,
-        "team_dimension_scores" => DxiCalculator.team_dimension_scores(developers).transform_keys(&:to_s)
       }
     end
 

@@ -1,7 +1,7 @@
 # No Rate Limiting on API Endpoints
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "011"
 tags: [code-review, security, performance, rails]
@@ -88,10 +88,10 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] API endpoints rate limited (100 req/min default)
-- [ ] force_refresh limited (5 req/hour per IP)
-- [ ] Rate limit headers returned (X-RateLimit-*)
-- [ ] 429 response when limit exceeded
+- [x] API endpoints rate limited (100 req/min default)
+- [x] force_refresh limited (5 req/hour per IP)
+- [ ] Rate limit headers returned (X-RateLimit-*) - Not included (Rails 8 native doesn't add these by default)
+- [x] 429 response when limit exceeded
 
 ## Work Log
 

@@ -1,7 +1,7 @@
 # Private Method Access via send()
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "010"
 tags: [code-review, rails, encapsulation]
@@ -102,9 +102,9 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] No `send` calls to private methods
-- [ ] Empty response structure available to controller
-- [ ] Tests pass
+- [x] No `send` calls to private methods
+- [x] Empty response structure available to controller
+- [x] Tests pass
 
 ## Work Log
 

@@ -3,9 +3,12 @@
 # Base controller for all API endpoints
 #
 # Inherits from ActionController::API for a slimmer middleware stack.
-# Provides consistent JSON error handling for all API responses.
+# Provides consistent JSON error handling and rate limiting for all API responses.
 module Api
   class BaseController < ActionController::API
+    # Rate limiting: 100 requests per minute per IP for general API access
+    rate_limit to: 100, within: 1.minute, by: -> { request.remote_ip }, with: -> { api_rate_limited }
+
     rescue_from ActiveRecord::RecordNotFound, with: :not_found
     rescue_from ActionController::ParameterMissing, with: :bad_request
     rescue_from ArgumentError, with: :bad_request
@@ -16,6 +19,13 @@ module Api
     rescue_from GithubService::GitHubApiError, with: :github_error
 
     private
+
+    def api_rate_limited
+      render json: {
+        error: "rate_limited",
+        detail: "API rate limit exceeded. Maximum 100 requests per minute."
+      }, status: :too_many_requests
+    end
 
     def not_found(exception)
       render json: { error: "not_found", detail: exception.message }, status: :not_found

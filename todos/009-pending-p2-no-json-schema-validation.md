@@ -1,7 +1,7 @@
 # No JSON Schema Validation for Sprint Data
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "009"
 tags: [code-review, data-integrity, rails]
@@ -102,10 +102,10 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] Invalid JSON structure rejected on save
-- [ ] Clear error messages for each invalid field
-- [ ] Existing valid data still saves successfully
-- [ ] Tests for each validation case
+- [x] Invalid JSON structure rejected on save
+- [x] Clear error messages for each invalid field
+- [x] Existing valid data still saves successfully
+- [x] Tests for each validation case
 
 ## Work Log
 

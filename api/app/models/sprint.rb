@@ -9,6 +9,7 @@ class Sprint < ApplicationRecord
   validates :start_date, :end_date, presence: true
   validates :start_date, uniqueness: { scope: :end_date }
   validate :end_date_after_start_date
+  validate :validate_data_structure
 
   scope :current, -> { where("start_date <= ? AND end_date >= ?", Date.current, Date.current) }
   scope :by_date, ->(date) { where("start_date <= ? AND end_date >= ?", date, date) }
@@ -19,30 +20,17 @@ class Sprint < ApplicationRecord
       find_by(start_date: start_date, end_date: end_date)
     end
 
-    # Find or fetch sprint data, optionally forcing a refresh
+    # Find or fetch sprint data, optionally forcing a refresh.
     #
-    # Uses transaction with retry on RecordNotUnique to handle race conditions
-    # when multiple concurrent requests try to create the same sprint.
+    # Delegates to SprintLoader for dependency-injected data fetching.
+    # This maintains the existing API while decoupling the model from GithubService.
+    #
+    # @param start_date [Date, String] Sprint start date
+    # @param end_date [Date, String] Sprint end date
+    # @param force [Boolean] When true, refetch data even if cached
+    # @return [Sprint] The loaded or created Sprint record
     def find_or_fetch!(start_date, end_date, force: false)
-      start_date = Date.parse(start_date.to_s)
-      end_date = Date.parse(end_date.to_s)
-
-      transaction do
-        sprint = find_by_dates(start_date, end_date)
-        return sprint if sprint && !force
-
-        data = GithubService.fetch_sprint_data(start_date, end_date)
-
-        if sprint
-          sprint.update!(data: data)
-          sprint
-        else
-          create!(start_date: start_date, end_date: end_date, data: data)
-        end
-      end
-    rescue ActiveRecord::RecordNotUnique
-      # Another request created the sprint while we were fetching data
-      find_by_dates(start_date, end_date)
+      SprintLoader.new.load(start_date, end_date, force: force)
     end
 
     # Calculate current sprint dates based on configuration
@@ -152,6 +140,34 @@ class Sprint < ApplicationRecord
   def end_date_after_start_date
     return unless start_date && end_date
     errors.add(:end_date, "must be after start date") if end_date < start_date
+  end
+
+  # Validates the JSON data structure to catch corruption early.
+  # This ensures data integrity and provides clear error messages.
+  def validate_data_structure
+    return if data.blank?
+
+    unless data.is_a?(Hash)
+      errors.add(:data, "must be a hash")
+      return
+    end
+
+    validate_array_field("developers")
+    validate_array_field("daily_activity")
+    validate_hash_field("summary")
+    validate_hash_field("team_dimension_scores")
+  end
+
+  def validate_array_field(key)
+    value = data[key]
+    return if value.nil?
+    errors.add(:data, "#{key} must be an array") unless value.is_a?(Array)
+  end
+
+  def validate_hash_field(key)
+    value = data[key]
+    return if value.nil?
+    errors.add(:data, "#{key} must be a hash") unless value.is_a?(Hash)
   end
 
   def build_summary(devs)

@@ -6,6 +6,8 @@
 #
 # Returns both the developer's personal history and team history for comparison.
 class DeveloperHistorySerializer
+  include DimensionScoreSerializable
+
   def initialize(developer_name, sprints)
     @developer_name = developer_name
     @sprints = sprints
@@ -46,17 +48,5 @@ class DeveloperHistorySerializer
 
   def team_sprint_entries
     @sprints.map { |sprint| SprintHistorySerializer.new(sprint).as_json }
-  end
-
-  def serialize_dimension_scores(scores)
-    return nil unless scores
-
-    {
-      review_speed: scores["review_turnaround"] || scores[:review_turnaround] || 0.0,
-      cycle_time: scores["cycle_time"] || scores[:cycle_time] || 0.0,
-      pr_size: scores["pr_size"] || scores[:pr_size] || 0.0,
-      review_coverage: scores["review_coverage"] || scores[:review_coverage] || 0.0,
-      commit_frequency: scores["commit_frequency"] || scores[:commit_frequency] || 0.0
-    }
   end
 end

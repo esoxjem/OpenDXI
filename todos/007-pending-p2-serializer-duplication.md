@@ -1,7 +1,7 @@
 # Serializer Dimension Scores Duplication
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "007"
 tags: [code-review, rails, dry]
@@ -97,9 +97,9 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] Single implementation of `serialize_dimension_scores`
-- [ ] All serializers produce identical output
-- [ ] Tests pass
+- [x] Single implementation of `serialize_dimension_scores`
+- [x] All serializers produce identical output
+- [x] Tests pass
 
 ## Work Log
 

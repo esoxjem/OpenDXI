@@ -193,17 +193,23 @@ class SprintTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { duplicate.save! }
   end
 
-  test "find_or_fetch! wrapped in transaction" do
-    # Verify the method uses a transaction by checking it's atomic
-    # This is a structural test - if the method changes to not use
-    # transactions, this test documents that expectation
-    source = Sprint.method(:find_or_fetch!).source_location
+  test "find_or_fetch! delegates to SprintLoader with transaction handling" do
+    # The transaction logic has been extracted to SprintLoader for
+    # dependency inversion (testability). Verify SprintLoader has the
+    # necessary atomicity guarantees.
+    source = SprintLoader.instance_method(:load).source_location
     source_file = File.read(source.first)
 
     assert_match(/transaction do/, source_file,
-      "find_or_fetch! should use a transaction for race condition handling")
+      "SprintLoader#load should use a transaction for race condition handling")
     assert_match(/rescue ActiveRecord::RecordNotUnique/, source_file,
-      "find_or_fetch! should rescue RecordNotUnique")
+      "SprintLoader#load should rescue RecordNotUnique")
+
+    # Verify Sprint.find_or_fetch! delegates to SprintLoader
+    sprint_source = Sprint.method(:find_or_fetch!).source_location
+    sprint_file = File.read(sprint_source.first)
+    assert_match(/SprintLoader\.new\.load/, sprint_file,
+      "Sprint.find_or_fetch! should delegate to SprintLoader")
   end
 
   private

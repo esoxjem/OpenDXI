@@ -6,6 +6,8 @@
 #   - GET /api/sprints/history (team trends)
 #   - Part of DeveloperHistorySerializer (team comparison)
 class SprintHistorySerializer
+  include DimensionScoreSerializable
+
   def initialize(sprint)
     @sprint = sprint
   end
@@ -22,20 +24,6 @@ class SprintHistorySerializer
       developer_count: summary["developer_count"] || @sprint.developers.size,
       total_commits: summary["total_commits"] || 0,
       total_prs: summary["total_prs"] || 0
-    }
-  end
-
-  private
-
-  def serialize_dimension_scores(scores)
-    return nil unless scores
-
-    {
-      review_speed: scores["review_turnaround"] || scores[:review_turnaround] || 0.0,
-      cycle_time: scores["cycle_time"] || scores[:cycle_time] || 0.0,
-      pr_size: scores["pr_size"] || scores[:pr_size] || 0.0,
-      review_coverage: scores["review_coverage"] || scores[:review_coverage] || 0.0,
-      commit_frequency: scores["commit_frequency"] || scores[:commit_frequency] || 0.0
     }
   end
 end

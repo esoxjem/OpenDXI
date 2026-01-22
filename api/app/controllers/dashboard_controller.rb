@@ -57,7 +57,7 @@ class DashboardController < ApplicationController
 
   def create_placeholder_sprint(start_date, end_date)
     Sprint.find_or_create_by!(start_date: start_date, end_date: end_date) do |s|
-      s.data = GithubService.send(:empty_response)
+      s.data = GithubService.empty_response
     end
   end
 

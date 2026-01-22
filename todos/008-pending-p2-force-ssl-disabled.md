@@ -1,7 +1,7 @@
 # SSL/HTTPS Not Enforced in Production
 
 ---
-status: pending
+status: completed
 priority: p2
 issue_id: "008"
 tags: [code-review, security, rails]
@@ -57,10 +57,10 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] HTTP requests redirected to HTTPS in production
-- [ ] Secure cookies flag set
-- [ ] HSTS header present
-- [ ] Health check endpoint accessible via HTTP
+- [x] HTTP requests redirected to HTTPS in production
+- [x] Secure cookies flag set
+- [x] HSTS header present
+- [x] Health check endpoint accessible via HTTP
 
 ## Work Log
 

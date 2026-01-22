@@ -2,6 +2,12 @@
 
 module Api
   class SprintsController < BaseController
+    # Stricter rate limit for force_refresh which triggers expensive GitHub API calls
+    rate_limit to: 5, within: 1.hour, by: -> { request.remote_ip },
+               only: :metrics,
+               if: -> { params[:force_refresh] == "true" },
+               with: -> { force_refresh_rate_limited }
+
     # GET /api/sprints
     #
     # Returns list of available sprints for the dropdown selector.
@@ -42,6 +48,13 @@ module Api
     end
 
     private
+
+    def force_refresh_rate_limited
+      render json: {
+        error: "rate_limited",
+        detail: "Force refresh is limited to 5 requests per hour. Data is cached and usually doesn't need refreshing."
+      }, status: :too_many_requests
+    end
 
     def serialize_sprint_item(sprint)
       {
