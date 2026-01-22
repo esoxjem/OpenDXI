@@ -14,6 +14,8 @@ import type { DailyActivity } from "@/types/metrics";
 
 interface ActivityChartProps {
   data: DailyActivity[];
+  sprintStart?: string;
+  sprintEnd?: string;
 }
 
 const chartConfig = {
@@ -31,8 +33,60 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function ActivityChart({ data }: ActivityChartProps) {
-  if (!data.length) {
+// Format date as YYYY-MM-DD using local time (avoids timezone issues with toISOString)
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Generate all dates between start and end (inclusive)
+function generateDateRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(start + "T00:00:00");
+  const endDate = new Date(end + "T00:00:00");
+
+  while (current <= endDate) {
+    dates.push(formatLocalDate(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+// Fill missing dates with zero activity
+function fillMissingDates(
+  data: DailyActivity[],
+  sprintStart?: string,
+  sprintEnd?: string,
+): DailyActivity[] {
+  if (!sprintStart || !sprintEnd) return data;
+
+  const allDates = generateDateRange(sprintStart, sprintEnd);
+  const dataMap = new Map(data.map((d) => [d.date, d]));
+
+  return allDates.map((date) => {
+    const existing = dataMap.get(date);
+    if (existing) return existing;
+    return {
+      date,
+      commits: 0,
+      prs_opened: 0,
+      prs_merged: 0,
+      reviews_given: 0,
+    };
+  });
+}
+
+export function ActivityChart({
+  data,
+  sprintStart,
+  sprintEnd,
+}: ActivityChartProps) {
+  // Fill in the complete sprint date range
+  const filledData = fillMissingDates(data, sprintStart, sprintEnd);
+
+  if (!filledData.length) {
     return (
       <Card>
         <CardHeader>
@@ -46,9 +100,9 @@ export function ActivityChart({ data }: ActivityChartProps) {
   }
 
   // Format date for display
-  const formattedData = data.map((d) => ({
+  const formattedData = filledData.map((d) => ({
     ...d,
-    displayDate: new Date(d.date).toLocaleDateString("en-US", {
+    displayDate: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     }),
