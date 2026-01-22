@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "./KpiCard";
 import { DxiRadarChart } from "./DxiRadarChart";
+import { DeveloperTrendChart } from "./DeveloperTrendChart";
+import { useDeveloperHistory } from "@/hooks/useMetrics";
 import type { DeveloperMetrics, DimensionScores } from "@/types/metrics";
 
 interface DeveloperDetailViewProps {
@@ -38,6 +40,12 @@ export function DeveloperDetailView({
   const linesChanged = developer.lines_added + developer.lines_deleted;
   const cycleTime = developer.avg_cycle_time_hours;
   const reviewTime = developer.avg_review_time_hours;
+
+  // Fetch historical data for this developer
+  const { data: historyData, isLoading: historyLoading } = useDeveloperHistory(
+    developer.developer,
+    6
+  );
 
   return (
     <motion.div
@@ -146,6 +154,23 @@ export function DeveloperDetailView({
           </CardContent>
         </Card>
       </div>
+
+      {/* Trend Chart */}
+      {historyLoading ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>DXI Trend</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center h-[350px] text-muted-foreground">
+            Loading historical data...
+          </CardContent>
+        </Card>
+      ) : historyData ? (
+        <DeveloperTrendChart
+          developerData={historyData.sprints}
+          teamData={historyData.team_history}
+        />
+      ) : null}
     </motion.div>
   );
 }

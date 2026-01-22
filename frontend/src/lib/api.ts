@@ -6,6 +6,7 @@
 
 import type {
   ConfigResponse,
+  DeveloperHistoryResponse,
   MetricsResponse,
   Sprint,
   SprintHistoryEntry,
@@ -77,4 +78,28 @@ export async function fetchSprintHistory(count = 6): Promise<SprintHistoryEntry[
   }
   const data: SprintHistoryResponse = await res.json();
   return data.sprints;
+}
+
+/**
+ * Fetch historical metrics for a specific developer across multiple sprints.
+ *
+ * @param developerName - The developer's name/username
+ * @param count - Number of sprints to include (default 6)
+ */
+export async function fetchDeveloperHistory(
+  developerName: string,
+  count = 6
+): Promise<DeveloperHistoryResponse> {
+  const encodedName = encodeURIComponent(developerName);
+  const url = new URL(`${API_BASE}/api/developers/${encodedName}/history`);
+  url.searchParams.set("count", count.toString());
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error(`Developer "${developerName}" not found in recent sprints`);
+    }
+    throw new Error("Failed to fetch developer history");
+  }
+  return res.json();
 }

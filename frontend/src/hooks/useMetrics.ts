@@ -8,7 +8,13 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchConfig, fetchSprints, fetchMetrics, fetchSprintHistory } from "@/lib/api";
+import {
+  fetchConfig,
+  fetchDeveloperHistory,
+  fetchMetrics,
+  fetchSprintHistory,
+  fetchSprints,
+} from "@/lib/api";
 
 /**
  * Hook to fetch application configuration.
@@ -72,6 +78,20 @@ export function useSprintHistory(count = 6) {
   return useQuery({
     queryKey: ["sprintHistory", count],
     queryFn: () => fetchSprintHistory(count),
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+}
+
+/**
+ * Hook to fetch historical metrics for a specific developer.
+ * Only enabled when developerName is provided.
+ * Uses 1 hour stale time since historical data changes infrequently.
+ */
+export function useDeveloperHistory(developerName: string | undefined, count = 6) {
+  return useQuery({
+    queryKey: ["developerHistory", developerName, count],
+    queryFn: () => fetchDeveloperHistory(developerName!, count),
+    enabled: !!developerName,
     staleTime: 1000 * 60 * 60, // 1 hour
   });
 }

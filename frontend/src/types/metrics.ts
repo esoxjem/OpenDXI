@@ -86,3 +86,27 @@ export interface SprintHistoryEntry {
 export interface SprintHistoryResponse {
   sprints: SprintHistoryEntry[];
 }
+
+/** Single sprint entry for a developer's historical trend analysis */
+export interface DeveloperHistoryEntry {
+  sprint_label: string;
+  start_date: string;
+  end_date: string;
+  dxi_score: number;
+  dimension_scores: DimensionScores;
+  commits: number;
+  prs_opened: number;
+  prs_merged: number;
+  reviews_given: number;
+  lines_added: number;
+  lines_deleted: number;
+  avg_review_time_hours: number | null;
+  avg_cycle_time_hours: number | null;
+}
+
+/** Historical metrics for a specific developer across multiple sprints */
+export interface DeveloperHistoryResponse {
+  developer: string;
+  sprints: DeveloperHistoryEntry[];
+  team_history: SprintHistoryEntry[];
+}
