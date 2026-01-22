@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+# Check for overmind or foreman
+if command -v overmind &> /dev/null; then
+  exec overmind start -f Procfile.dev "$@"
+elif command -v foreman &> /dev/null; then
+  exec foreman start -f Procfile.dev "$@"
+else
+  echo "Please install overmind (recommended) or foreman:"
+  echo ""
+  echo "  brew install overmind    # macOS"
+  echo "  gem install foreman      # Ruby"
+  echo ""
+  exit 1
+fi
