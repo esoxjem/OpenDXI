@@ -1,7 +1,7 @@
 require_relative "boot"
 
 require "rails"
-# Pick the frameworks you want:
+# Pick the frameworks you want (API-only mode):
 require "active_model/railtie"
 require "active_job/railtie"
 require "active_record/railtie"
@@ -10,8 +10,8 @@ require "action_controller/railtie"
 # require "action_mailer/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
-require "action_view/railtie"
-require "action_cable/engine"
+# require "action_view/railtie"  # Not needed for API-only
+# require "action_cable/engine"  # Not needed for API-only
 require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
@@ -22,6 +22,9 @@ module OpendxiRails
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
+
+    # API-only mode - no views, assets, or cookies needed
+    config.api_only = true
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.

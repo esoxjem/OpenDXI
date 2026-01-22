@@ -100,7 +100,7 @@ class GithubService
 
       # Step 2: Filter to repos with activity in sprint window
       active_repos = all_repos.select do |r|
-        !r["isArchived"] && !r["isFork"] && r["pushedAt"].to_s[0, 10] >= since_date
+        !r["isArchived"] && !r["isFork"] && extract_date(r["pushedAt"]) >= since_date
       end
       return empty_response if active_repos.empty?
 
@@ -109,7 +109,7 @@ class GithubService
       active_repos.each do |repo|
         prs = fetch_all_pages(PRS_QUERY, { owner: org, repo: repo["name"] }, %w[repository pullRequests])
         prs.each do |pr|
-          created_date = pr["createdAt"].to_s[0, 10]
+          created_date = extract_date(pr["createdAt"])
           if created_date >= since_date && created_date <= until_date
             pr["_repo"] = repo["name"]
             all_prs << pr
@@ -154,6 +154,12 @@ class GithubService
 
     def config
       Rails.application.config.opendxi
+    end
+
+    # Extracts the YYYY-MM-DD date portion from an ISO 8601 timestamp string.
+    # Example: "2026-01-22T14:30:00Z" -> "2026-01-22"
+    def extract_date(iso_timestamp)
+      iso_timestamp.to_s[0, 10]
     end
 
     def validate_gh_cli!
@@ -261,7 +267,7 @@ class GithubService
         login = author.dig("user", "login") || author["name"].to_s
         next if login.blank? || login.end_with?("[bot]")
 
-        commit_date = author["date"].to_s[0, 10]
+        commit_date = extract_date(author["date"])
         next if commit_date < since_date || commit_date > until_date
 
         developer_stats[login]["commits"] += 1
@@ -274,7 +280,7 @@ class GithubService
     def process_prs(prs, developer_stats, daily_stats, since_date, until_date)
       prs.each do |pr|
         created_at = pr["createdAt"].to_s
-        created_date = created_at[0, 10]
+        created_date = extract_date(created_at)
         next if created_date < since_date || created_date > until_date
 
         author = pr.dig("author", "login").to_s
@@ -294,7 +300,7 @@ class GithubService
       merged_at = pr["mergedAt"]
       return unless merged_at.present?
 
-      merged_date = merged_at[0, 10]
+      merged_date = extract_date(merged_at)
       return if merged_date > until_date
 
       developer_stats[author]["prs_merged"] += 1
@@ -315,7 +321,7 @@ class GithubService
         submitted_at = review["submittedAt"]
         next unless submitted_at.present?
 
-        review_date = submitted_at[0, 10]
+        review_date = extract_date(submitted_at)
         next if review_date > until_date
 
         developer_stats[reviewer]["reviews_given"] += 1

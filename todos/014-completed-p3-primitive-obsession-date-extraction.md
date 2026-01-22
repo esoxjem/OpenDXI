@@ -72,9 +72,9 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] Single helper method for date extraction
-- [ ] All 6 occurrences use the helper
-- [ ] Tests pass
+- [x] Single helper method for date extraction
+- [x] All 6 occurrences use the helper
+- [x] Tests pass
 
 ## Work Log
 

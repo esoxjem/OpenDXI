@@ -68,9 +68,9 @@ _To be filled during triage_
 
 ## Acceptance Criteria
 
-- [ ] GET /api/developers returns list of developer names
-- [ ] Optional `sprint_count` parameter
-- [ ] Response format: `{ "developers": ["name1", "name2", ...] }`
+- [x] GET /api/developers returns list of developer names
+- [x] Optional `sprint_count` parameter
+- [x] Response format: `{ "developers": ["name1", "name2", ...] }`
 
 ## Work Log
 

@@ -2,6 +2,23 @@
 
 module Api
   class DevelopersController < BaseController
+    # GET /api/developers
+    #
+    # Returns a list of unique developer names from recent sprints.
+    # Supports optional sprint_count parameter (default: 6, max: 12).
+    def index
+      count = (params[:sprint_count] || 6).to_i.clamp(1, 12)
+      sprints = Sprint.order(start_date: :desc).limit(count)
+
+      developers = sprints.flat_map(&:developers)
+                          .map { |d| d["developer"] }
+                          .compact
+                          .uniq
+                          .sort
+
+      render json: { developers: developers }
+    end
+
     # GET /api/developers/:name/history
     #
     # Returns historical metrics for a specific developer across multiple sprints.
