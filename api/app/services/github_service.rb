@@ -2,21 +2,18 @@
 
 # GitHub GraphQL API Service
 #
-# Fetches repository metrics using the `gh` CLI tool. This approach leverages
-# local GitHub authentication and avoids managing tokens directly.
+# Fetches repository metrics using direct HTTP calls to GitHub's GraphQL API.
+# Authenticates via GH_TOKEN environment variable (Personal Access Token).
 #
-# Note: Uses synchronous subprocess calls. For production at scale,
-# consider migrating to Faraday with GITHUB_TOKEN.
+# Required scopes for GH_TOKEN:
+#   - repo (access private repository data)
+#   - read:org (read organization membership)
 class GithubService
-  class GhCliNotFound < StandardError
-    def message
-      "GitHub CLI not found. Install from https://cli.github.com and run 'gh auth login'"
-    end
-  end
-
   class GitHubApiError < StandardError; end
   class RateLimitExceeded < GitHubApiError; end
   class AuthenticationError < GitHubApiError; end
+
+  GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 
   REPOS_QUERY = <<~GRAPHQL
     query($org: String!, $cursor: String) {
@@ -86,7 +83,6 @@ class GithubService
 
   class << self
     def fetch_sprint_data(start_date, end_date)
-      validate_gh_cli!
       validate_github_org!
 
       since_date = start_date.to_s
@@ -186,39 +182,38 @@ class GithubService
       iso_timestamp.to_s[0, 10]
     end
 
-    def validate_gh_cli!
-      result = `which gh 2>/dev/null`.strip
-      raise GhCliNotFound if result.empty?
-    end
-
     def validate_github_org!
       raise GitHubApiError, "GITHUB_ORG environment variable not set" if config.github_org.blank?
     end
 
     def run_graphql(query, variables)
-      args = [ "api", "graphql", "-f", "query=#{query}" ]
-      variables.each do |key, value|
-        next if value.nil?
-        args += [ "-F", "#{key}=#{value}" ]
+      token = ENV.fetch("GH_TOKEN") do
+        raise GitHubApiError, "GH_TOKEN not set. Create one at https://github.com/settings/tokens"
       end
 
-      # Pass GH_TOKEN explicitly to ensure gh CLI can authenticate
-      env = ENV["GH_TOKEN"] ? { "GH_TOKEN" => ENV["GH_TOKEN"] } : {}
-      stdout, stderr, status = Open3.capture3(env, "gh", *args)
+      response = Faraday.post(GITHUB_GRAPHQL_URL) do |req|
+        req.headers["Authorization"] = "Bearer #{token}"
+        req.headers["Content-Type"] = "application/json"
+        req.body = { query: query, variables: variables }.to_json
+      end
 
-      unless status.success?
-        if stderr.include?("rate limit")
-          raise RateLimitExceeded, "GitHub API rate limit exceeded"
-        elsif stderr.include?("authentication") || stderr.include?("401")
-          raise AuthenticationError, "GitHub authentication failed. Run 'gh auth login'"
-        else
-          raise GitHubApiError, "GitHub API error: #{stderr}"
+      body = JSON.parse(response.body)
+
+      case response.status
+      when 200
+        if body["errors"] && body["data"].nil?
+          raise GitHubApiError, "GraphQL error: #{body['errors'].map { |e| e['message'] }.join('; ')}"
         end
+        body
+      when 401
+        raise AuthenticationError, "GitHub authentication failed. Check GH_TOKEN."
+      when 403, 429
+        raise RateLimitExceeded, "GitHub API rate limit exceeded"
+      else
+        raise GitHubApiError, "GitHub API error (#{response.status})"
       end
-
-      JSON.parse(stdout)
-    rescue JSON::ParserError => e
-      raise GitHubApiError, "Invalid JSON response: #{e.message}"
+    rescue Faraday::Error => e
+      raise GitHubApiError, "Connection failed: #{e.message}"
     end
 
     def fetch_all_pages(query, variables, path)

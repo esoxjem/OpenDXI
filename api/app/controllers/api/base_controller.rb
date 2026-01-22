@@ -13,7 +13,6 @@ module Api
     rescue_from ActionController::ParameterMissing, with: :bad_request
     rescue_from ArgumentError, with: :bad_request
     rescue_from Date::Error, with: :bad_request
-    rescue_from GithubService::GhCliNotFound, with: :gh_cli_missing
     rescue_from GithubService::RateLimitExceeded, with: :rate_limited
     rescue_from GithubService::AuthenticationError, with: :github_auth_error
     rescue_from GithubService::GitHubApiError, with: :github_error
@@ -35,13 +34,6 @@ module Api
       render json: { error: "bad_request", detail: exception.message }, status: :bad_request
     end
 
-    def gh_cli_missing(exception)
-      render json: {
-        error: "configuration_error",
-        detail: exception.message
-      }, status: :service_unavailable
-    end
-
     def rate_limited(_exception)
       render json: {
         error: "rate_limited",
@@ -52,7 +44,7 @@ module Api
     def github_auth_error(_exception)
       render json: {
         error: "authentication_error",
-        detail: "GitHub authentication failed. Please run 'gh auth login'."
+        detail: "GitHub authentication failed. Please check GH_TOKEN."
       }, status: :bad_gateway
     end
 
