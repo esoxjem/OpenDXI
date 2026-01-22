@@ -94,42 +94,61 @@ class GithubService
       since_iso = "#{since_date}T00:00:00Z"
       org = config.github_org
 
+      log "Fetching sprint #{since_date} to #{until_date} for org: #{org}"
+
       # Step 1: Get all active repos
+      log "  Step 1: Fetching repositories..."
       all_repos = fetch_all_pages(REPOS_QUERY, { org: org }, %w[organization repositories])
-      return empty_response if all_repos.empty?
+      if all_repos.empty?
+        log "  No repositories found"
+        return empty_response
+      end
+      log "  Found #{all_repos.size} total repositories"
 
       # Step 2: Filter to repos with activity in sprint window
       active_repos = all_repos.select do |r|
         !r["isArchived"] && !r["isFork"] && extract_date(r["pushedAt"]) >= since_date
       end
-      return empty_response if active_repos.empty?
+      if active_repos.empty?
+        log "  No active repositories in sprint window"
+        return empty_response
+      end
+      log "  Step 2: #{active_repos.size} repos with activity in sprint window"
 
       # Step 3: Fetch PRs for each active repo (reviews are now inline in the query)
+      log "  Step 3: Fetching PRs from #{active_repos.size} repos..."
       all_prs = []
-      active_repos.each do |repo|
+      active_repos.each_with_index do |repo, i|
         prs = fetch_all_pages(PRS_QUERY, { owner: org, repo: repo["name"] }, %w[repository pullRequests])
-        prs.each do |pr|
+        prs_in_window = prs.select do |pr|
           created_date = extract_date(pr["createdAt"])
-          if created_date >= since_date && created_date <= until_date
-            pr["_repo"] = repo["name"]
-            all_prs << pr
-          end
+          created_date >= since_date && created_date <= until_date
         end
+        prs_in_window.each { |pr| pr["_repo"] = repo["name"] }
+        all_prs.concat(prs_in_window)
+        log "    [#{i + 1}/#{active_repos.size}] #{repo['name']}: #{prs_in_window.size} PRs" if prs_in_window.any?
       end
+      log "  Found #{all_prs.size} total PRs in sprint window"
 
       # Step 4: Fetch commits for each active repo
+      log "  Step 4: Fetching commits from #{active_repos.size} repos..."
       all_commits = []
-      active_repos.each do |repo|
+      active_repos.each_with_index do |repo, i|
         commits = fetch_all_pages(
           COMMITS_QUERY,
           { owner: org, repo: repo["name"], since: since_iso },
           %w[repository defaultBranchRef target history]
         )
         all_commits.concat(commits)
+        log "    [#{i + 1}/#{active_repos.size}] #{repo['name']}: #{commits.size} commits" if commits.any?
       end
+      log "  Found #{all_commits.size} total commits"
 
       # Step 5: Process into dashboard format
-      aggregate_data(all_prs, all_commits, since_date, until_date)
+      log "  Step 5: Aggregating data..."
+      result = aggregate_data(all_prs, all_commits, since_date, until_date)
+      log "  Done! #{result['developers']&.size || 0} developers, #{result['daily_activity']&.size || 0} daily entries"
+      result
     end
 
     # Returns an empty data structure for sprints with no activity.
@@ -156,6 +175,11 @@ class GithubService
       Rails.application.config.opendxi
     end
 
+    def log(message)
+      Rails.logger.info("[GithubService] #{message}")
+      puts "[GithubService] #{message}" if Rails.env.development? || $stdout.tty?
+    end
+
     # Extracts the YYYY-MM-DD date portion from an ISO 8601 timestamp string.
     # Example: "2026-01-22T14:30:00Z" -> "2026-01-22"
     def extract_date(iso_timestamp)
@@ -178,7 +202,9 @@ class GithubService
         args += [ "-F", "#{key}=#{value}" ]
       end
 
-      stdout, stderr, status = Open3.capture3("gh", *args)
+      # Pass GH_TOKEN explicitly to ensure gh CLI can authenticate
+      env = ENV["GH_TOKEN"] ? { "GH_TOKEN" => ENV["GH_TOKEN"] } : {}
+      stdout, stderr, status = Open3.capture3(env, "gh", *args)
 
       unless status.success?
         if stderr.include?("rate limit")

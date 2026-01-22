@@ -40,3 +40,4 @@ build/
 # Claude Code
 .claude/**
 .mcp.json
+CLAUDE.md

@@ -3,9 +3,10 @@
 module Api
   class SprintsController < BaseController
     # Stricter rate limit for force_refresh which triggers expensive GitHub API calls
+    # Disabled in development for easier testing
     rate_limit to: 5, within: 1.hour, by: -> { request.remote_ip },
                only: :metrics,
-               if: -> { params[:force_refresh] == "true" },
+               if: -> { params[:force_refresh] == "true" && !Rails.env.development? },
                with: -> { force_refresh_rate_limited }
 
     # GET /api/sprints
