@@ -38,10 +38,12 @@ module Api
     # GET /api/sprints/history
     #
     # Returns historical DXI scores across multiple sprints for trend analysis.
+    # Sprints are ordered chronologically (oldest first) for proper trend display.
     # Supports count query param (default: 6, max: 12).
     def history
       count = (params[:count] || 6).to_i.clamp(1, 12)
-      sprints = Sprint.order(start_date: :desc).limit(count)
+      # Order ascending so trends show oldest→newest (left→right on charts)
+      sprints = Sprint.order(start_date: :desc).limit(count).reverse
 
       render json: {
         sprints: sprints.map { |s| SprintHistorySerializer.new(s).as_json }

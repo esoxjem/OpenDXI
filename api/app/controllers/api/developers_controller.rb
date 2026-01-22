@@ -23,12 +23,14 @@ module Api
     #
     # Returns historical metrics for a specific developer across multiple sprints.
     # Also includes team averages for comparison.
+    # Sprints are ordered chronologically (oldest first) for proper trend display.
     # Supports count query param (default: 6, max: 12).
     def history
       developer_name = URI.decode_www_form_component(params[:name])
       count = (params[:count] || 6).to_i.clamp(1, 12)
 
-      sprints = Sprint.order(start_date: :desc).limit(count)
+      # Order ascending so trends show oldest→newest (left→right on charts)
+      sprints = Sprint.order(start_date: :desc).limit(count).reverse
 
       # Verify developer exists in at least one sprint
       found_in_any = sprints.any? { |s| s.find_developer(developer_name) }
