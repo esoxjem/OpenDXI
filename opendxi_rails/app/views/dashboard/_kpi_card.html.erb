@@ -1,0 +1,9 @@
+<%# KPI Card Component %>
+<% color_class ||= "bg-white border-gray-200" %>
+<div class="rounded-lg shadow border p-6 <%= color_class %>" data-testid="kpi-card">
+  <dt class="text-sm font-medium text-gray-500 truncate"><%= title %></dt>
+  <dd class="mt-1 text-3xl font-semibold text-gray-900"><%= value %></dd>
+  <% if local_assigns[:subtitle] %>
+    <dd class="mt-1 text-sm text-gray-500"><%= subtitle %></dd>
+  <% end %>
+</div>

@@ -1,0 +1,30 @@
+<%# Daily Activity Stacked Area Chart using Chartkick %>
+<%
+  daily = sprint.daily_activity
+
+  if daily.any?
+    commits_data = daily.map { |d| [d["date"], d["commits"]] }
+    prs_data = daily.map { |d| [d["date"], d["prs_merged"]] }
+    reviews_data = daily.map { |d| [d["date"], d["reviews_given"]] }
+%>
+  <%= area_chart [
+    { name: "Commits", data: commits_data },
+    { name: "PRs Merged", data: prs_data },
+    { name: "Reviews", data: reviews_data }
+  ],
+  stacked: true,
+  colors: ["#3b82f6", "#10b981", "#f59e0b"],
+  library: {
+    tension: 0.3,
+    plugins: {
+      legend: { position: "bottom" }
+    },
+    scales: {
+      y: { beginAtZero: true, stacked: true }
+    }
+  } %>
+<% else %>
+  <div class="flex items-center justify-center h-64 text-gray-500">
+    <p>No activity data available</p>
+  </div>
+<% end %>

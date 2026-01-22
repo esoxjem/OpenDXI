@@ -1,0 +1,4 @@
+<%# Metrics content partial for Turbo Stream updates %>
+<turbo-frame id="metrics-content">
+  <%= render "dashboard/#{@view || 'team'}_tab", sprint: sprint, sort_by: @sort_by, sort_dir: @sort_dir %>
+</turbo-frame>

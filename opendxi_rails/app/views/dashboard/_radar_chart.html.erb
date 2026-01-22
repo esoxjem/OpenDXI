@@ -1,0 +1,10 @@
+<%# Radar Chart for DXI Dimensions using Chart.js + Stimulus %>
+<%
+  team = team_scores || {}
+  developer = local_assigns[:developer_scores] || {}
+%>
+<div data-controller="radar-chart"
+     data-radar-chart-team-value="<%= team.to_json %>"
+     data-radar-chart-developer-value="<%= developer.to_json %>">
+  <canvas data-radar-chart-target="canvas" class="max-h-80"></canvas>
+</div>

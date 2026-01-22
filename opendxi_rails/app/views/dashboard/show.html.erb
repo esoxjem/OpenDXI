@@ -1,0 +1,27 @@
+<%# Dashboard main view %>
+<div class="space-y-6">
+  <%# Header with sprint selector %>
+  <div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold text-gray-900"><%= @sprint.label %></h2>
+    <%= render "shared/sprint_selector", sprints: @sprints, sprint: @sprint %>
+  </div>
+
+  <%# Tab navigation %>
+  <div class="border-b border-gray-200">
+    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+      <%= link_to "Team Overview",
+            dashboard_path(sprint: @sprint.date_range_param, view: "team"),
+            class: "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{@view == 'team' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}",
+            data: { turbo_frame: "tab-content" } %>
+      <%= link_to "Developers",
+            dashboard_path(sprint: @sprint.date_range_param, view: "developers"),
+            class: "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm #{@view == 'developers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}",
+            data: { turbo_frame: "tab-content" } %>
+    </nav>
+  </div>
+
+  <%# Tab content (Turbo Frame target) %>
+  <turbo-frame id="tab-content">
+    <%= render "dashboard/#{@view}_tab", sprint: @sprint, sort_by: @sort_by, sort_dir: @sort_dir %>
+  </turbo-frame>
+</div>

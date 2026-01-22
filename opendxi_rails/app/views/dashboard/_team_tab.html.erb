@@ -1,0 +1,60 @@
+<%# Team Overview Tab %>
+<div class="space-y-6">
+  <%# KPI Cards %>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <%= render "dashboard/kpi_card",
+          title: "Team DXI Score",
+          value: sprint.summary["avg_dxi_score"]&.round(1) || "—",
+          subtitle: dxi_score_label(sprint.summary["avg_dxi_score"]),
+          color_class: dxi_score_bg_class(sprint.summary["avg_dxi_score"]) %>
+
+    <%= render "dashboard/kpi_card",
+          title: "Total Commits",
+          value: format_number(sprint.summary["total_commits"]),
+          subtitle: "#{sprint.developers.size} developers" %>
+
+    <%= render "dashboard/kpi_card",
+          title: "Pull Requests",
+          value: format_number(sprint.summary["total_prs"]),
+          subtitle: "#{sprint.summary["total_merged"]} merged" %>
+
+    <%= render "dashboard/kpi_card",
+          title: "Code Reviews",
+          value: format_number(sprint.summary["total_reviews"]),
+          subtitle: "Given by team" %>
+  </div>
+
+  <%# Charts Section %>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <%# Activity Chart %>
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Daily Activity</h3>
+      <%= render "dashboard/activity_chart", sprint: sprint %>
+    </div>
+
+    <%# Radar Chart %>
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Team Dimension Scores</h3>
+      <%= render "dashboard/radar_chart", team_scores: sprint.team_dimension_scores %>
+    </div>
+  </div>
+
+  <%# Dimension Breakdown %>
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">DXI Dimensions</h3>
+    <div class="space-y-4">
+      <% sprint.team_dimension_scores.each do |dim, score| %>
+        <div class="flex items-center">
+          <span class="w-40 text-sm text-gray-600"><%= dimension_label(dim) %></span>
+          <div class="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full <%= dimension_color_class(score) %> rounded-full transition-all duration-300"
+                 style="width: <%= dimension_bar_width(score) %>%"></div>
+          </div>
+          <span class="w-16 text-right text-sm font-medium <%= dxi_score_class(score) %>">
+            <%= score&.round(1) || "—" %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
