@@ -19,7 +19,7 @@ Dashboard available at http://localhost:3001
 
 - Ruby 3.3+
 - Node.js 18+
-- GitHub CLI (`gh`) authenticated with access to your GitHub org
+- GitHub Personal Access Token with `repo` and `read:org` scopes
 
 ## Running Individually
 
@@ -53,15 +53,17 @@ Copy the example environment file and configure your GitHub organization:
 cp api/.env.example api/.env
 ```
 
-Edit `api/.env` and set your GitHub org:
+Edit `api/.env` and configure:
 
 ```
 GITHUB_ORG=your-github-org
+GH_TOKEN=your-github-token
 ```
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GITHUB_ORG` | GitHub organization name (required) | - |
+| `GH_TOKEN` | GitHub Personal Access Token (required). [Create one](https://github.com/settings/tokens) with `repo` and `read:org` scopes | - |
 | `SPRINT_START_DATE` | First sprint start date (YYYY-MM-DD) | `2026-01-07` |
 | `SPRINT_DURATION_DAYS` | Sprint length in days | `14` |
 | `MAX_PAGES_PER_QUERY` | GraphQL pagination limit | `10` |
@@ -80,9 +82,9 @@ cp frontend/.env.example frontend/.env.local
 ## Architecture
 
 ```
-GitHub GraphQL API (via `gh` CLI)
+GitHub GraphQL API (via GH_TOKEN)
     ↓
-GithubService → fetch via subprocess
+GithubService → fetch via Faraday HTTP
     ↓
 DxiCalculator → calculate DXI scores
     ↓
