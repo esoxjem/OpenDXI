@@ -2,9 +2,14 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   useConfig,
   useSprints,
@@ -212,7 +217,44 @@ function DashboardContent() {
           <h1 className="text-2xl font-bold">
             {config?.github_org || "OpenDXI"} DXI Dashboard
           </h1>
-          <p className="text-muted-foreground">Developer Experience Index</p>
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground">Developer Experience Index</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="inline-flex items-center justify-center rounded-full h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="DXI information"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-sm">
+                <div className="space-y-2 text-sm">
+                  <p className="font-semibold">DXI Score Dimensions:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <span className="font-medium">Review Turnaround (25%):</span> Time to review PRs
+                    </li>
+                    <li>
+                      <span className="font-medium">PR Cycle Time (25%):</span> Time from PR creation to merge
+                    </li>
+                    <li>
+                      <span className="font-medium">PR Size (20%):</span> Number of lines changed
+                    </li>
+                    <li>
+                      <span className="font-medium">Review Coverage (15%):</span> Review frequency
+                    </li>
+                    <li>
+                      <span className="font-medium">Commit Frequency (15%):</span> Commits per sprint
+                    </li>
+                  </ul>
+                  <p className="text-xs pt-1">
+                    <span className="font-medium">Score ranges:</span> 70+ good, 50-70 moderate, &lt;50 needs improvement
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {metricsLoading && !refreshMutation.isPending && (
