@@ -21,6 +21,9 @@ class SprintLoader
   # Uses transaction with retry on RecordNotUnique to handle race conditions
   # when multiple concurrent requests try to create the same sprint.
   #
+  # IMPORTANT: GitHub fetch happens OUTSIDE the transaction to avoid holding
+  # SQLite write locks during slow network operations (prevents BusyException).
+  #
   # @param start_date [Date, String] Sprint start date
   # @param end_date [Date, String] Sprint end date
   # @param force [Boolean] When true, refetch data even if cached
@@ -29,12 +32,17 @@ class SprintLoader
     start_date = Date.parse(start_date.to_s)
     end_date = Date.parse(end_date.to_s)
 
+    # Check cache first (outside transaction - no lock held)
+    sprint = Sprint.find_by_dates(start_date, end_date)
+    return sprint if sprint && !force
+
+    # Fetch data OUTSIDE transaction - this is slow and should not hold a DB lock
+    data = @fetcher.fetch_sprint_data(start_date, end_date)
+
+    # Quick transaction for DB write only (minimal lock time)
     Sprint.transaction do
+      # Re-check in case another request created it while we were fetching
       sprint = Sprint.find_by_dates(start_date, end_date)
-      return sprint if sprint && !force
-
-      data = @fetcher.fetch_sprint_data(start_date, end_date)
-
       if sprint
         sprint.update!(data: data)
         sprint
