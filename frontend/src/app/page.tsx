@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useCallback, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -28,16 +28,16 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Gate: check auth before fetching data
-  if (authLoading) return <DashboardSkeleton />;
-  if (!isAuthenticated) {
-    window.location.href = "/login";
-    return null;
-  }
-
+  // URL params (not hooks, just reading from searchParams)
   const sprintParam = searchParams.get("sprint");
   const viewParam = searchParams.get("view") || "team";
   const developerParam = searchParams.get("developer");
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY - Rules of Hooks
+  // Hooks must be called in the same order every render, so no hooks after
+  // conditional returns. Move all hooks here, before any early returns.
+  // ═══════════════════════════════════════════════════════════════════════════
 
   const { data: config } = useConfig();
   const { data: sprints, isLoading: sprintsLoading } = useSprints();
@@ -96,6 +96,26 @@ function DashboardContent() {
     [router, searchParams],
   );
 
+  // Redirect to login if not authenticated (using useEffect to avoid render-time side effects)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/login";
+    }
+  }, [authLoading, isAuthenticated]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // END OF HOOKS - Conditional returns below are safe now
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Auth loading state
+  if (authLoading) return <DashboardSkeleton />;
+
+  // Not authenticated - show loading while redirecting
+  if (!isAuthenticated) {
+    return <DashboardSkeleton />;
+  }
+
+  // Handler functions (not hooks, just regular functions)
   const handleSprintChange = (value: string) => {
     updateUrlParams({ sprint: value });
   };
