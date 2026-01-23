@@ -11,6 +11,14 @@ module Api
     # GET /api/auth/me
     # Returns current user info or 401 with login URL
     def me
+      # When auth is skipped, return a fake dev user
+      if skip_auth?
+        return render json: {
+          authenticated: true,
+          user: { login: "dev-user", name: "Local Developer", avatar_url: nil }
+        }
+      end
+
       if current_user && user_still_authorized?
         render json: { authenticated: true, user: current_user }
       elsif current_user && !user_still_authorized?
