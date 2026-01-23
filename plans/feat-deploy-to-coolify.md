@@ -21,6 +21,36 @@
 
 ---
 
+## Current Status
+
+**Last Updated:** 2026-01-23
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Docker Configuration | ✅ Complete | All Dockerfiles, configs, and health endpoints created |
+| Phase 2: Rails Production Config | ✅ Complete | Host auth, GH_TOKEN validation, database.yml simplified |
+| Phase 3: Deploy to Coolify | 🔲 Not Started | Requires manual Coolify UI configuration |
+| Phase 4: Verification | 🔲 Not Started | Post-deployment testing |
+
+### Next Steps
+
+1. **Create GitHub OAuth App** (required for auth)
+   - Go to https://github.com/settings/developers → New OAuth App
+   - Homepage URL: `https://dxi.esoxjem.com`
+   - Callback URL: `https://dxi-api.esoxjem.com/auth/github/callback`
+   - Save the Client ID and Client Secret
+
+2. **Configure DNS Records** (if not already done)
+   - Add A records for `dxi.esoxjem.com` and `dxi-api.esoxjem.com` pointing to Coolify server IP
+
+3. **Create Coolify Project** and configure both resources following Phase 3 instructions below
+
+4. **Deploy** (order matters: API first, then Frontend)
+
+5. **Verify** using the deployment verification checklist at `plans/deployment-verification-checklist.md`
+
+---
+
 ## Overview
 
 Deploy the OpenDXI application (Rails 8 API + Next.js frontend) to Coolify with:
