@@ -12,10 +12,11 @@ module Api
     # Returns current user info or 401 with login URL
     def me
       # When auth is skipped, return a fake dev user
+      # NOTE: Must include all fields that match frontend's AuthUser interface
       if skip_auth?
         return render json: {
           authenticated: true,
-          user: { login: "dev-user", name: "Local Developer", avatar_url: nil }
+          user: { github_id: 0, login: "dev-user", name: "Local Developer", avatar_url: "" }
         }
       end
 
