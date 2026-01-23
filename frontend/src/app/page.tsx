@@ -55,6 +55,7 @@ function DashboardContent() {
   const {
     data: metrics,
     isLoading: metricsLoading,
+    isFetching: metricsFetching,
     error,
   } = useMetrics(startDate, endDate);
   const { data: sprintHistory, isLoading: historyLoading } =
@@ -223,6 +224,18 @@ function DashboardContent() {
             >
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               <span>Fetching...</span>
+            </div>
+          )}
+          {metricsFetching && !metricsLoading && !refreshMutation.isPending && (
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-loading-state="refreshing"
+              data-testid="refreshing-metrics"
+              aria-busy="true"
+              role="status"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Refreshing...</span>
             </div>
           )}
           <SprintSelector
