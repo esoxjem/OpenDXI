@@ -42,14 +42,23 @@ export function useSprints() {
 
 /**
  * Hook to fetch metrics for a specific sprint.
- * Uses 5 minute stale time to match backend's current sprint cache TTL.
+ *
+ * Implements "stale-while-revalidate" pattern for optimal UX:
+ * - Data is considered fresh for 5 minutes
+ * - After 5 minutes, data becomes stale but continues showing
+ * - Stale data remains in memory for 30 minutes (gcTime)
+ * - When component mounts or window gains focus, stale data is revalidated
+ * - This enables instant UI rendering with background refetch
  */
 export function useMetrics(startDate: string | undefined, endDate: string | undefined) {
   return useQuery({
     queryKey: ["metrics", startDate, endDate],
     queryFn: () => fetchMetrics(startDate!, endDate!),
     enabled: !!startDate && !!endDate,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,       // 5 minutes - data considered fresh
+    gcTime: 1000 * 60 * 30,          // 30 minutes - keep in memory for stale-while-revalidate
+    refetchOnMount: 'stale',         // Refetch if stale when component mounts
+    refetchOnWindowFocus: 'stale',   // Refetch if stale when window regains focus
   });
 }
 
