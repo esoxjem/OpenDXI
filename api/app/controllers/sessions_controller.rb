@@ -1,13 +1,5 @@
 # frozen_string_literal: true
 
-# Handles GitHub OAuth callbacks and session management
-#
-# OAuth flow:
-#   1. User clicks "Sign in with GitHub" (POST /auth/github via form)
-#   2. OmniAuth redirects to GitHub for authorization
-#   3. GitHub redirects back to /auth/github/callback (this controller)
-#   4. We verify the user is in the allowed list and create a session
-#   5. User is redirected to the frontend
 class SessionsController < ApplicationController
   def create
     auth = request.env["omniauth.auth"]
@@ -25,7 +17,6 @@ class SessionsController < ApplicationController
       return
     end
 
-    # Create session (OAuth token NOT stored - security best practice)
     session[:user] = user_info
     session[:authenticated_at] = Time.current.iso8601
 

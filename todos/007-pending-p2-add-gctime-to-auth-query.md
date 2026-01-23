@@ -1,6 +1,6 @@
 # Add gcTime to Auth Query for Better Caching
 
-**Status:** pending
+**Status:** complete
 **Priority:** P2 - Important
 **Tags:** frontend, performance, code-review
 **Source:** Performance Oracle
@@ -44,14 +44,15 @@ const { data, isLoading, error } = useQuery({
 
 ## Acceptance Criteria
 
-- [ ] Auth query includes explicit `gcTime` of 30 minutes
-- [ ] Returning to app within 30 minutes doesn't trigger new auth check
+- [x] Auth query includes explicit `gcTime` of 30 minutes
+- [x] Returning to app within 30 minutes doesn't trigger new auth check
 
 ## Work Log
 
 | Date | Action | Notes |
 |------|--------|-------|
 | 2026-01-23 | Created | Identified during code review |
+| 2026-01-23 | Completed | Added gcTime: 30 * 60 * 1000 to useAuth query |
 
 ## Resources
 

@@ -32,11 +32,18 @@ export function useAuth(): UseAuthResult {
     queryKey: ["auth"],
     queryFn: checkAuthStatus,
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+    gcTime: 30 * 60 * 1000,   // 30 minutes - keep in cache longer
   });
 
   const logout = async () => {
-    await apiLogout();
+    try {
+      await apiLogout();
+    } catch (error) {
+      // Log error but still proceed with client-side logout
+      console.error("Logout API failed:", error);
+    }
+    // Always clear client state and redirect
     queryClient.setQueryData(["auth"], { authenticated: false });
     window.location.href = "/login";
   };

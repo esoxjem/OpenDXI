@@ -11,6 +11,7 @@ import {
   useRefreshMetrics,
   useSprintHistory,
 } from "@/hooks/useMetrics";
+import { useAuth } from "@/hooks/useAuth";
 import { SprintSelector } from "@/components/dashboard/SprintSelector";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
@@ -25,6 +26,15 @@ import { UserMenu } from "@/components/layout/UserMenu";
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Gate: check auth before fetching data
+  if (authLoading) return <DashboardSkeleton />;
+  if (!isAuthenticated) {
+    window.location.href = "/login";
+    return null;
+  }
+
   const sprintParam = searchParams.get("sprint");
   const viewParam = searchParams.get("view") || "team";
   const developerParam = searchParams.get("developer");

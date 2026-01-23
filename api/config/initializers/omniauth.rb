@@ -17,10 +17,6 @@ end
 
 OmniAuth.config.logger = Rails.logger
 
-# Allow GET requests for OAuth initiation
-# This is safe because:
-#   1. OAuth uses state parameter for CSRF protection
-#   2. The OAuth flow doesn't modify any data until callback (which validates state)
-#   3. Cross-origin POST with CSRF tokens is complex and error-prone
+# Allow GET for simpler cross-origin OAuth initiation
 OmniAuth.config.allowed_request_methods = %i[get post]
 OmniAuth.config.silence_get_warning = true

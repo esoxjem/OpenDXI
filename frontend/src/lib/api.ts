@@ -17,10 +17,6 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Authentication Types & Functions
-// ═══════════════════════════════════════════════════════════════════════════
-
 export interface AuthUser {
   github_id: number;
   login: string;
@@ -34,10 +30,6 @@ export interface AuthStatus {
   login_url?: string;
 }
 
-/**
- * Check current authentication status.
- * Returns user info if authenticated, or login URL if not.
- */
 export async function checkAuthStatus(): Promise<AuthStatus> {
   const response = await fetch(`${API_BASE}/api/auth/me`, {
     credentials: "include",
@@ -45,10 +37,6 @@ export async function checkAuthStatus(): Promise<AuthStatus> {
   return response.json();
 }
 
-/**
- * Log out the current user.
- * Redirects to login page after clearing session.
- */
 export async function logout(): Promise<void> {
   await fetch(`${API_BASE}/auth/logout`, {
     method: "DELETE",
@@ -56,22 +44,10 @@ export async function logout(): Promise<void> {
   });
 }
 
-/**
- * Get the OAuth login URL for GitHub.
- * Uses direct /auth/github link since OmniAuth now accepts GET requests.
- */
 export function getLoginUrl(): string {
   return `${API_BASE}/auth/github`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// API Request Helper
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Make an authenticated API request.
- * Automatically includes credentials and handles 401 errors.
- */
 async function apiRequest<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     credentials: "include",
@@ -91,20 +67,10 @@ async function apiRequest<T>(endpoint: string): Promise<T> {
   return response.json();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Data Fetching Functions
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Fetch application configuration.
- */
 export async function fetchConfig(): Promise<ConfigResponse> {
   return apiRequest<ConfigResponse>("/api/config");
 }
 
-/**
- * Fetch the list of available sprints.
- */
 export async function fetchSprints(): Promise<Sprint[]> {
   const data = await apiRequest<SprintListResponse>("/api/sprints");
   return data.sprints;
