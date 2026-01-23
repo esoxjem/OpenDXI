@@ -311,7 +311,7 @@ end
 
 - [x] All existing tests pass
 - [x] New unit tests for HTTP error scenarios
-- [ ] Manual test with real GitHub token
+- [x] Manual test with real GitHub token
 - [ ] Verify in Docker container (no gh CLI installed)
 
 ## Files to Create/Modify
@@ -344,7 +344,7 @@ end
 ### After Migration
 
 - [x] Run all tests
-- [ ] Manual test: `rails console` → `GithubService.fetch_sprint_data(...)`
+- [x] Manual test: `rails console` → `GithubService.fetch_sprint_data(...)`
 - [ ] Test in Docker container without gh CLI
 - [ ] Update deployment documentation
 
