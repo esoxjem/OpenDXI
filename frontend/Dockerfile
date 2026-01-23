@@ -6,7 +6,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+RUN npm ci
 
 # Stage 2: Build application
 FROM base AS builder
@@ -43,8 +43,5 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
-# Note: Removed Docker HEALTHCHECK - Coolify handles health checking via UI config
-# Using longer start-period (30s) allows for Next.js cold start
 
 CMD ["node", "server.js"]

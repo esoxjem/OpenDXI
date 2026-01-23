@@ -60,7 +60,7 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  config.hosts << "dxi-api.esoxjem.com"
+  config.hosts << ENV.fetch("ALLOWED_HOST", "dxi-api.esoxjem.com")
 
   # Skip DNS rebinding protection for the default health check endpoint.
   # This allows Coolify health checks to work without a valid Host header.
