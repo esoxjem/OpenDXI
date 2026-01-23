@@ -213,12 +213,6 @@ function DashboardContent() {
           <p className="text-muted-foreground">Developer Experience Index</p>
         </div>
         <div className="flex items-center gap-2">
-          <SprintSelector
-            sprints={sprints}
-            value={selectedSprint}
-            onValueChange={handleSprintChange}
-            isLoading={sprintsLoading}
-          />
           {metricsLoading && !refreshMutation.isPending && (
             <div
               className="flex items-center gap-2 text-sm text-muted-foreground"
@@ -231,6 +225,12 @@ function DashboardContent() {
               <span>Fetching...</span>
             </div>
           )}
+          <SprintSelector
+            sprints={sprints}
+            value={selectedSprint}
+            onValueChange={handleSprintChange}
+            isLoading={sprintsLoading}
+          />
           <Button
             variant="outline"
             onClick={handleRefresh}
