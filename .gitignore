@@ -42,3 +42,7 @@ build/
 .mcp.json
 CLAUDE.md
 todos/
+.worktrees
+
+# User-specific scripts
+bin/setup-oauth
