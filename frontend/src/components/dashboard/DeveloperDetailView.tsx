@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "./KpiCard";
 import { DxiRadarChart } from "./DxiRadarChart";
 import { DeveloperTrendChart } from "./DeveloperTrendChart";
+import { LoadingMessage } from "@/components/ui/loading-message";
 import { useDeveloperHistory } from "@/hooks/useMetrics";
 import type { DeveloperMetrics, DimensionScores } from "@/types/metrics";
 
@@ -161,8 +162,8 @@ export function DeveloperDetailView({
           <CardHeader>
             <CardTitle>DXI Trend</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-center h-[350px] text-muted-foreground">
-            Loading historical data...
+          <CardContent>
+            <LoadingMessage message={`Loading ${developer.developer}'s history...`} className="h-[350px]" testId="loading-developer-history" />
           </CardContent>
         </Card>
       ) : historyData ? (
