@@ -43,6 +43,7 @@ build/
 CLAUDE.md
 todos/
 .worktrees
+plans/
 
 # User-specific scripts
 bin/setup-oauth
