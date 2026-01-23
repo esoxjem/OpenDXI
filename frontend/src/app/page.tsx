@@ -143,15 +143,6 @@ function DashboardContent() {
     updateUrlParams({ developer: null });
   };
 
-  // Loading state - contextual messages
-  if (sprintsLoading) {
-    return <LoadingMessage message="Loading sprints..." testId="loading-sprints" />;
-  }
-
-  if (metricsLoading && !metrics) {
-    return <LoadingMessage message={`Fetching Sprint ${selectedSprintLabel}...`} testId="loading-metrics" />;
-  }
-
   // Error state
   if (error) {
     return (
@@ -222,12 +213,17 @@ function DashboardContent() {
           <p className="text-muted-foreground">Developer Experience Index</p>
         </div>
         <div className="flex items-center gap-2">
-          {sprints && (
-            <SprintSelector
-              sprints={sprints}
-              value={selectedSprint}
-              onValueChange={handleSprintChange}
-            />
+          <SprintSelector
+            sprints={sprints}
+            value={selectedSprint}
+            onValueChange={handleSprintChange}
+            isLoading={sprintsLoading}
+          />
+          {metricsLoading && !refreshMutation.isPending && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Fetching...</span>
+            </div>
           )}
           <Button
             variant="outline"
