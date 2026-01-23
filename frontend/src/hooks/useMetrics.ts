@@ -15,7 +15,7 @@ import {
   fetchSprintHistory,
   fetchSprints,
 } from "@/lib/api";
-import type { MetricsResponse, SprintListResponse, SprintHistoryResponse, ConfigResponse, DeveloperHistoryResponse } from "@/types/metrics";
+import type { MetricsResponse, SprintListResponse, SprintHistoryResponse, ConfigResponse, DeveloperHistoryResponse, SprintHistoryEntry } from "@/types/metrics";
 
 /**
  * Hook to fetch application configuration.
@@ -52,14 +52,14 @@ export function useSprints() {
  * - This enables instant UI rendering with background refetch
  */
 export function useMetrics(startDate: string | undefined, endDate: string | undefined) {
-  return useQuery<MetricsResponse>({
+  return useQuery<MetricsResponse, Error, MetricsResponse>({
     queryKey: ["metrics", startDate, endDate],
     queryFn: () => fetchMetrics(startDate!, endDate!),
     enabled: !!startDate && !!endDate,
     staleTime: 1000 * 60 * 5,       // 5 minutes - data considered fresh
     gcTime: 1000 * 60 * 30,          // 30 minutes - keep in memory for stale-while-revalidate
-    refetchOnMount: 'stale',         // Refetch if stale when component mounts
-    refetchOnWindowFocus: 'stale',   // Refetch if stale when window regains focus
+    refetchOnMount: true,            // Refetch if data is stale when component mounts
+    refetchOnWindowFocus: true,      // Refetch if data is stale when window regains focus
   });
 }
 
@@ -85,7 +85,7 @@ export function useRefreshMetrics() {
  * Uses 1 hour stale time since historical data changes infrequently.
  */
 export function useSprintHistory(count = 6) {
-  return useQuery({
+  return useQuery<SprintHistoryEntry[], Error, SprintHistoryEntry[]>({
     queryKey: ["sprintHistory", count],
     queryFn: () => fetchSprintHistory(count),
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -98,7 +98,7 @@ export function useSprintHistory(count = 6) {
  * Uses 1 hour stale time since historical data changes infrequently.
  */
 export function useDeveloperHistory(developerName: string | undefined, count = 6) {
-  return useQuery({
+  return useQuery<DeveloperHistoryResponse, Error, DeveloperHistoryResponse>({
     queryKey: ["developerHistory", developerName, count],
     queryFn: () => fetchDeveloperHistory(developerName!, count),
     enabled: !!developerName,
