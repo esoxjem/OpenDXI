@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_22_085324) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_23_154123) do
   create_table "sprints", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "data"
     t.date "end_date", null: false
     t.date "start_date", null: false
     t.datetime "updated_at", null: false
+    t.index ["start_date", "end_date"], name: "index_sprints_on_dates_unique", unique: true
     t.index ["start_date", "end_date"], name: "index_sprints_on_start_date_and_end_date", unique: true
     t.index ["start_date"], name: "index_sprints_on_start_date"
   end

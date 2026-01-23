@@ -25,6 +25,11 @@ module Api
     #
     # Returns full metrics for a specific sprint.
     # Supports force_refresh=true query param to bypass cache.
+    #
+    # HTTP Caching:
+    # - Returns 304 Not Modified if client ETag matches (bandwidth optimization)
+    # - Always returns 200 OK when force_refresh=true (bypass cache)
+    # - Sets cache headers for browser and CDN caching
     def metrics
       start_date = Date.parse(params[:start_date])
       end_date = Date.parse(params[:end_date])
@@ -32,6 +37,26 @@ module Api
 
       sprint = Sprint.find_or_fetch!(start_date, end_date, force: force_refresh)
 
+      # Set cache headers for browser/CDN
+      response.cache_control[:public] = true
+      response.cache_control[:max_age] = 5.minutes.to_i
+
+      # If force_refresh, always return full response (bypass ETag check)
+      if force_refresh
+        return render json: MetricsResponseSerializer.new(sprint).as_json
+      end
+
+      # Generate ETag based on content hash
+      etag = sprint.generate_cache_key
+
+      # Check if client has matching ETag in If-None-Match header
+      if request.headers["If-None-Match"] == "\"#{etag}\""
+        # Client has matching ETag - return 304 Not Modified
+        return head :not_modified
+      end
+
+      # Return full response with ETag header
+      response.set_header("ETag", "\"#{etag}\"")
       render json: MetricsResponseSerializer.new(sprint).as_json
     end
 
