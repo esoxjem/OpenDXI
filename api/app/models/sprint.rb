@@ -115,19 +115,21 @@ class Sprint < ApplicationRecord
   # Generate content-based ETag for HTTP caching
   #
   # Creates a unique cache key based on:
-  # - Actual data content (MD5 hash of sorted data)
+  # - Actual data content (SHA256 hash of sorted data)
   # - Updated timestamp
   #
   # This ensures ETags change if:
   # - Data content changes (even if timestamp hasn't updated)
   # - Record is updated
   #
+  # Uses SHA256 (not MD5) for cryptographic strength against collision attacks.
+  #
   # ETag format: "#{id}-#{data_hash}-#{updated_timestamp}"
-  # Example: "123-5d41402abc4b2a76b9719d911017c592-1672531200"
+  # Example: "123-abc123def456...xyz-1672531200"
   def generate_cache_key
     return unless id
     if data.present?
-      data_hash = Digest::MD5.hexdigest(JSON.generate(data.to_h.sort.to_s))
+      data_hash = Digest::SHA256.hexdigest(JSON.generate(data.to_h.sort.to_s))
       "#{id}-#{data_hash}-#{updated_at.to_i}"
     else
       "#{id}-empty-#{updated_at.to_i}"
