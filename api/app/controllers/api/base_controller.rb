@@ -28,6 +28,9 @@ module Api
     SESSION_MAX_AGE = 24.hours
 
     def authenticate!
+      # Skip authentication entirely in development when SKIP_AUTH is set
+      return if skip_auth?
+
       unless current_user
         return render json: {
           error: "unauthorized",
@@ -45,6 +48,10 @@ module Api
           login_url: "/auth/github"
         }, status: :unauthorized
       end
+    end
+
+    def skip_auth?
+      Rails.env.development? && ENV["SKIP_AUTH"] == "true"
     end
 
     def current_user
