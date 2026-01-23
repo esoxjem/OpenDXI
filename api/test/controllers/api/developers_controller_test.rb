@@ -5,6 +5,9 @@ require "test_helper"
 module Api
   class DevelopersControllerTest < ActionDispatch::IntegrationTest
     setup do
+      # Authenticate before each test
+      sign_in_as
+
       # Create multiple sprints with different developers
       @sprint1 = Sprint.create!(
         start_date: Date.current - 14,

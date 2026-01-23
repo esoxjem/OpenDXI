@@ -2,6 +2,7 @@
  * API client for the OpenDXI Dashboard Rails backend.
  *
  * All API calls are centralized here for easy configuration and error handling.
+ * IMPORTANT: credentials: "include" is required for session cookies to work cross-origin.
  */
 
 import type {
@@ -16,26 +17,96 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Authentication Types & Functions
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface AuthUser {
+  github_id: number;
+  login: string;
+  name: string | null;
+  avatar_url: string;
+}
+
+export interface AuthStatus {
+  authenticated: boolean;
+  user?: AuthUser;
+  login_url?: string;
+}
+
+/**
+ * Check current authentication status.
+ * Returns user info if authenticated, or login URL if not.
+ */
+export async function checkAuthStatus(): Promise<AuthStatus> {
+  const response = await fetch(`${API_BASE}/api/auth/me`, {
+    credentials: "include",
+  });
+  return response.json();
+}
+
+/**
+ * Log out the current user.
+ * Redirects to login page after clearing session.
+ */
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/auth/logout`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
+/**
+ * Get the OAuth login URL for GitHub.
+ * Uses direct /auth/github link since OmniAuth now accepts GET requests.
+ */
+export function getLoginUrl(): string {
+  return `${API_BASE}/auth/github`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// API Request Helper
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Make an authenticated API request.
+ * Automatically includes credentials and handles 401 errors.
+ */
+async function apiRequest<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      // Redirect to login on auth failure (only in browser)
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Data Fetching Functions
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Fetch application configuration.
  */
 export async function fetchConfig(): Promise<ConfigResponse> {
-  const res = await fetch(`${API_BASE}/api/config`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch config");
-  }
-  return res.json();
+  return apiRequest<ConfigResponse>("/api/config");
 }
 
 /**
  * Fetch the list of available sprints.
  */
 export async function fetchSprints(): Promise<Sprint[]> {
-  const res = await fetch(`${API_BASE}/api/sprints`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch sprints");
-  }
-  const data: SprintListResponse = await res.json();
+  const data = await apiRequest<SprintListResponse>("/api/sprints");
   return data.sprints;
 }
 
@@ -51,16 +122,10 @@ export async function fetchMetrics(
   endDate: string,
   forceRefresh = false
 ): Promise<MetricsResponse> {
-  const url = new URL(`${API_BASE}/api/sprints/${startDate}/${endDate}/metrics`);
-  if (forceRefresh) {
-    url.searchParams.set("force_refresh", "true");
-  }
-
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    throw new Error("Failed to fetch metrics");
-  }
-  return res.json();
+  const endpoint = forceRefresh
+    ? `/api/sprints/${startDate}/${endDate}/metrics?force_refresh=true`
+    : `/api/sprints/${startDate}/${endDate}/metrics`;
+  return apiRequest<MetricsResponse>(endpoint);
 }
 
 /**
@@ -69,14 +134,7 @@ export async function fetchMetrics(
  * @param count - Number of sprints to include (default 6)
  */
 export async function fetchSprintHistory(count = 6): Promise<SprintHistoryEntry[]> {
-  const url = new URL(`${API_BASE}/api/sprints/history`);
-  url.searchParams.set("count", count.toString());
-
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    throw new Error("Failed to fetch sprint history");
-  }
-  const data: SprintHistoryResponse = await res.json();
+  const data = await apiRequest<SprintHistoryResponse>(`/api/sprints/history?count=${count}`);
   return data.sprints;
 }
 
@@ -91,15 +149,5 @@ export async function fetchDeveloperHistory(
   count = 6
 ): Promise<DeveloperHistoryResponse> {
   const encodedName = encodeURIComponent(developerName);
-  const url = new URL(`${API_BASE}/api/developers/${encodedName}/history`);
-  url.searchParams.set("count", count.toString());
-
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    if (res.status === 404) {
-      throw new Error(`Developer "${developerName}" not found in recent sprints`);
-    }
-    throw new Error("Failed to fetch developer history");
-  }
-  return res.json();
+  return apiRequest<DeveloperHistoryResponse>(`/api/developers/${encodedName}/history?count=${count}`);
 }

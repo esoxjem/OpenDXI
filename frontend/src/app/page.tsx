@@ -20,6 +20,7 @@ import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
 import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 function DashboardContent() {
   const router = useRouter();
@@ -181,7 +182,7 @@ function DashboardContent() {
           </h1>
           <p className="text-muted-foreground">Developer Experience Index</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {sprints && (
             <SprintSelector
               sprints={sprints}
@@ -196,6 +197,7 @@ function DashboardContent() {
           >
             {refreshMutation.isPending ? "Refreshing..." : "Refresh"}
           </Button>
+          <UserMenu />
         </div>
       </div>
 
