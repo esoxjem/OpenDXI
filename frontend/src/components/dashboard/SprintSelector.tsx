@@ -25,8 +25,14 @@ export function SprintSelector({
 }: SprintSelectorProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50 w-[280px]">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <div
+        className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50 w-[280px]"
+        data-loading-state="loading"
+        data-testid="loading-sprints"
+        aria-busy="true"
+        role="status"
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
         <span className="text-sm text-muted-foreground">Loading sprints...</span>
       </div>
     );

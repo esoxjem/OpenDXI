@@ -220,8 +220,14 @@ function DashboardContent() {
             isLoading={sprintsLoading}
           />
           {metricsLoading && !refreshMutation.isPending && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-loading-state="loading"
+              data-testid="loading-metrics"
+              aria-busy="true"
+              role="status"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               <span>Fetching...</span>
             </div>
           )}
