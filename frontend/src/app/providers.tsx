@@ -7,9 +7,9 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   // Create QueryClient inside component to avoid sharing state between requests
   const [queryClient] = useState(
     () =>
@@ -18,8 +18,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             // Don't refetch on window focus in development
             refetchOnWindowFocus: process.env.NODE_ENV === "production",
-            // Retry failed requests once
-            retry: 1,
+            // Smart retry: don't retry on auth errors
+            retry: (failureCount, error) => {
+              // Don't retry on auth errors - user needs to log in
+              if (error instanceof Error && error.message === "Unauthorized") {
+                return false;
+              }
+              // Retry other errors once
+              return failureCount < 1;
+            },
           },
         },
       })
