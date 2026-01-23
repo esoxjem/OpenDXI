@@ -19,7 +19,7 @@ import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { DxiRadarChart } from "@/components/dashboard/DxiRadarChart";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
-import { LoadingMessage } from "@/components/ui/LoadingMessage";
+import { LoadingMessage } from "@/components/ui/loading-message";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
 import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
@@ -145,11 +145,11 @@ function DashboardContent() {
 
   // Loading state - contextual messages
   if (sprintsLoading) {
-    return <LoadingMessage message="Loading sprints..." />;
+    return <LoadingMessage message="Loading sprints..." testId="loading-sprints" />;
   }
 
   if (metricsLoading && !metrics) {
-    return <LoadingMessage message={`Fetching Sprint ${selectedSprintLabel}...`} />;
+    return <LoadingMessage message={`Fetching Sprint ${selectedSprintLabel}...`} testId="loading-metrics" />;
   }
 
   // Error state
@@ -342,7 +342,7 @@ function DashboardContent() {
         {/* History Tab */}
         <TabsContent value="history" className="space-y-6">
           {historyLoading ? (
-            <LoadingMessage message="Loading sprint history..." className="h-[400px]" />
+            <LoadingMessage message="Loading sprint history..." className="h-[400px]" testId="loading-history" />
           ) : (
             <>
               <DxiTrendChart data={sprintHistory || []} />
