@@ -207,7 +207,16 @@ class GithubService
         body
       when 401
         raise AuthenticationError, "GitHub authentication failed. Check GH_TOKEN."
-      when 403, 429
+      when 403
+        # Distinguish between rate limiting and permission denied by checking rate limit headers.
+        # GitHub sets X-RateLimit-Remaining to "0" when rate limited, but includes remaining
+        # requests when the 403 is due to insufficient permissions.
+        if response.headers["X-RateLimit-Remaining"] == "0"
+          raise RateLimitExceeded, "GitHub API rate limit exceeded"
+        else
+          raise AuthenticationError, "GitHub API permission denied. Ensure GH_TOKEN has 'repo' and 'read:org' scopes."
+        end
+      when 429
         raise RateLimitExceeded, "GitHub API rate limit exceeded"
       else
         raise GitHubApiError, "GitHub API error (#{response.status})"
