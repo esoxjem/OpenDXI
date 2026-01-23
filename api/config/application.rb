@@ -23,8 +23,19 @@ module OpendxiRails
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 
-    # API-only mode - no views, assets, or cookies needed
+    # API-only mode - but with sessions for OAuth
     config.api_only = true
+
+    # Re-add session middleware for OAuth (required for API-only mode)
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore,
+      key: "_opendxi_session",
+      # SameSite=None requires Secure=true, which doesn't work in dev (http)
+      # Use Lax in development (works for same-site navigation from different ports)
+      # Use None+Secure in production (works for true cross-origin with HTTPS)
+      same_site: Rails.env.production? ? :none : :lax,
+      secure: Rails.env.production?,
+      httponly: true  # Explicit is better than implicit for security
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.

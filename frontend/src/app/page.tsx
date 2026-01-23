@@ -11,6 +11,7 @@ import {
   useRefreshMetrics,
   useSprintHistory,
 } from "@/hooks/useMetrics";
+import { useAuth } from "@/hooks/useAuth";
 import { SprintSelector } from "@/components/dashboard/SprintSelector";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
@@ -20,10 +21,20 @@ import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
 import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Gate: check auth before fetching data
+  if (authLoading) return <DashboardSkeleton />;
+  if (!isAuthenticated) {
+    window.location.href = "/login";
+    return null;
+  }
+
   const sprintParam = searchParams.get("sprint");
   const viewParam = searchParams.get("view") || "team";
   const developerParam = searchParams.get("developer");
@@ -181,7 +192,7 @@ function DashboardContent() {
           </h1>
           <p className="text-muted-foreground">Developer Experience Index</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {sprints && (
             <SprintSelector
               sprints={sprints}
@@ -196,6 +207,7 @@ function DashboardContent() {
           >
             {refreshMutation.isPending ? "Refreshing..." : "Refresh"}
           </Button>
+          <UserMenu />
         </div>
       </div>
 

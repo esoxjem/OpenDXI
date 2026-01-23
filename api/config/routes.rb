@@ -1,8 +1,30 @@
 Rails.application.routes.draw do
   # ═══════════════════════════════════════════════════════════════════════════
+  # Health Check (PUBLIC - no auth required)
+  # ═══════════════════════════════════════════════════════════════════════════
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Test-only route for setting up authenticated sessions in tests
+  if Rails.env.test?
+    post "test/auth", to: "test_auth#create"
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # OAuth Routes (PUBLIC - handles auth flow)
+  # Note: GET /auth/github is handled by OmniAuth middleware automatically
+  # ═══════════════════════════════════════════════════════════════════════════
+  get "/auth/github/callback", to: "sessions#create"
+  get "/auth/failure", to: "sessions#failure"
+  delete "/auth/logout", to: "sessions#destroy"
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # API Routes (JSON API for Next.js frontend)
   # ═══════════════════════════════════════════════════════════════════════════
   namespace :api do
+    # Auth status endpoint
+    get "auth/me", to: "auth#me"
+
+    # Existing endpoints (protected by authentication)
     get "health", to: "health#show"
     get "config", to: "config#show"
 
@@ -15,7 +37,4 @@ Rails.application.routes.draw do
     get "developers", to: "developers#index"
     get "developers/:name/history", to: "developers#history", as: :developer_history
   end
-
-  # Health check (built-in Rails health check)
-  get "up" => "rails/health#show", as: :rails_health_check
 end

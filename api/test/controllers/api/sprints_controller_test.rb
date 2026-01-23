@@ -5,6 +5,9 @@ require "test_helper"
 module Api
   class SprintsControllerTest < ActionDispatch::IntegrationTest
     setup do
+      # Authenticate before each test
+      sign_in_as
+
       @sprint = Sprint.create!(
         start_date: Date.current - 7,
         end_date: Date.current + 7,
