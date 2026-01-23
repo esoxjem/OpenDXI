@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -18,6 +19,7 @@ import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { DxiRadarChart } from "@/components/dashboard/DxiRadarChart";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { LoadingMessage } from "@/components/ui/loading-message";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
 import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
@@ -46,6 +48,9 @@ function DashboardContent() {
   // Use URL param or default to first (current) sprint
   const selectedSprint = sprintParam || sprints?.[0]?.value;
   const [startDate, endDate] = selectedSprint?.split("|") || [];
+
+  // Get the selected sprint's label for loading messages
+  const selectedSprintLabel = sprints?.find(s => s.value === selectedSprint)?.label ?? "data";
 
   const {
     data: metrics,
@@ -138,9 +143,13 @@ function DashboardContent() {
     updateUrlParams({ developer: null });
   };
 
-  // Loading state
-  if (sprintsLoading || (metricsLoading && !metrics)) {
-    return <DashboardSkeleton />;
+  // Loading state - contextual messages
+  if (sprintsLoading) {
+    return <LoadingMessage message="Loading sprints..." testId="loading-sprints" />;
+  }
+
+  if (metricsLoading && !metrics) {
+    return <LoadingMessage message={`Fetching Sprint ${selectedSprintLabel}...`} testId="loading-metrics" />;
   }
 
   // Error state
@@ -225,7 +234,17 @@ function DashboardContent() {
             onClick={handleRefresh}
             disabled={refreshMutation.isPending}
           >
-            {refreshMutation.isPending ? "Refreshing..." : "Refresh"}
+            {refreshMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </>
+            )}
           </Button>
           <UserMenu />
         </div>
@@ -323,9 +342,7 @@ function DashboardContent() {
         {/* History Tab */}
         <TabsContent value="history" className="space-y-6">
           {historyLoading ? (
-            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-              Loading historical data...
-            </div>
+            <LoadingMessage message="Loading sprint history..." className="h-[400px]" testId="loading-history" />
           ) : (
             <>
               <DxiTrendChart data={sprintHistory || []} />
