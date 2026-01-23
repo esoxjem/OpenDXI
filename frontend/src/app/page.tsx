@@ -12,6 +12,7 @@ import {
   useRefreshMetrics,
   useSprintHistory,
 } from "@/hooks/useMetrics";
+import type { MetricsResponse } from "@/types/metrics";
 import { useAuth } from "@/hooks/useAuth";
 import { SprintSelector } from "@/components/dashboard/SprintSelector";
 import { KpiCard } from "@/components/dashboard/KpiCard";

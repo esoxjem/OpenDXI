@@ -15,6 +15,7 @@ import {
   fetchSprintHistory,
   fetchSprints,
 } from "@/lib/api";
+import type { MetricsResponse, SprintListResponse, SprintHistoryResponse, ConfigResponse, DeveloperHistoryResponse } from "@/types/metrics";
 
 /**
  * Hook to fetch application configuration.
@@ -51,7 +52,7 @@ export function useSprints() {
  * - This enables instant UI rendering with background refetch
  */
 export function useMetrics(startDate: string | undefined, endDate: string | undefined) {
-  return useQuery({
+  return useQuery<MetricsResponse>({
     queryKey: ["metrics", startDate, endDate],
     queryFn: () => fetchMetrics(startDate!, endDate!),
     enabled: !!startDate && !!endDate,
