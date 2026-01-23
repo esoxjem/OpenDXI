@@ -6,14 +6,14 @@ require "webmock/minitest"
 class GithubServiceTest < ActiveSupport::TestCase
   setup do
     @original_token = ENV["GH_TOKEN"]
-    @original_org = ENV["GITHUB_ORG"]
+    @original_org = Rails.application.config.opendxi.github_org
     ENV["GH_TOKEN"] = "test-token"
-    ENV["GITHUB_ORG"] = "test-org"
+    Rails.application.config.opendxi.github_org = "test-org"
   end
 
   teardown do
     ENV["GH_TOKEN"] = @original_token
-    ENV["GITHUB_ORG"] = @original_org
+    Rails.application.config.opendxi.github_org = @original_org
     WebMock.reset!
   end
 
@@ -53,7 +53,44 @@ class GithubServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises RateLimitExceeded on 403 response" do
+  test "raises RateLimitExceeded on 403 response when rate limit exhausted" do
+    stub_request(:post, "https://api.github.com/graphql")
+      .to_return(
+        status: 403,
+        body: { message: "API rate limit exceeded" }.to_json,
+        headers: {
+          "Content-Type" => "application/json",
+          "X-RateLimit-Remaining" => "0"
+        }
+      )
+
+    error = assert_raises(GithubService::RateLimitExceeded) do
+      GithubService.fetch_sprint_data(Date.today - 14, Date.today)
+    end
+
+    assert_match(/rate limit exceeded/, error.message)
+  end
+
+  test "raises AuthenticationError on 403 response when permission denied" do
+    stub_request(:post, "https://api.github.com/graphql")
+      .to_return(
+        status: 403,
+        body: { message: "Resource not accessible by integration" }.to_json,
+        headers: {
+          "Content-Type" => "application/json",
+          "X-RateLimit-Remaining" => "4999"
+        }
+      )
+
+    error = assert_raises(GithubService::AuthenticationError) do
+      GithubService.fetch_sprint_data(Date.today - 14, Date.today)
+    end
+
+    assert_match(/permission denied/, error.message)
+    assert_match(/repo.*read:org/, error.message)
+  end
+
+  test "raises AuthenticationError on 403 response without rate limit headers" do
     stub_request(:post, "https://api.github.com/graphql")
       .to_return(
         status: 403,
@@ -61,9 +98,11 @@ class GithubServiceTest < ActiveSupport::TestCase
         headers: { "Content-Type" => "application/json" }
       )
 
-    assert_raises(GithubService::RateLimitExceeded) do
+    error = assert_raises(GithubService::AuthenticationError) do
       GithubService.fetch_sprint_data(Date.today - 14, Date.today)
     end
+
+    assert_match(/permission denied/, error.message)
   end
 
   test "returns data when no repositories found" do
