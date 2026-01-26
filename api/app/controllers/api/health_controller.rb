@@ -15,12 +15,19 @@ module Api
     private
 
     def refresh_status
-      cache_status = Rails.cache.read("github_refresh")
+      job_status = JobStatus.find_by(name: "github_refresh")
       data_freshness = Sprint.maximum(:updated_at)&.iso8601
 
-      return { last_data_update: data_freshness } if cache_status.nil?
+      return { last_data_update: data_freshness } if job_status.nil?
 
-      cache_status.merge(last_data_update: data_freshness)
+      {
+        at: job_status.ran_at&.iso8601,
+        status: job_status.status,
+        error: job_status.error,
+        sprints_succeeded: job_status.sprints_succeeded,
+        sprints_failed: job_status.sprints_failed,
+        last_data_update: data_freshness
+      }.compact
     end
   end
 end

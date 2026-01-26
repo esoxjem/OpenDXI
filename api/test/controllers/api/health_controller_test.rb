@@ -7,14 +7,8 @@ class Api::HealthControllerTest < ActionDispatch::IntegrationTest
     # Authenticate before each test
     sign_in_as
 
-    # Use memory store for cache tests
-    @original_cache = Rails.cache
-    Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    Rails.cache.clear
-  end
-
-  teardown do
-    Rails.cache = @original_cache
+    # Clean up any existing job status records
+    JobStatus.delete_all
   end
 
   test "returns health status with version and timestamp" do
@@ -28,12 +22,13 @@ class Api::HealthControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil json["timestamp"]
   end
 
-  test "includes refresh status when cache is populated" do
-    # Populate the cache with refresh status
-    Rails.cache.write("github_refresh", {
-      at: "2026-01-26T10:00:00Z",
-      status: "ok"
-    })
+  test "includes refresh status when job status exists" do
+    # Create job status record in database
+    JobStatus.create!(
+      name: "github_refresh",
+      status: "ok",
+      ran_at: Time.zone.parse("2026-01-26T10:00:00Z")
+    )
 
     # Create a sprint to have a data freshness timestamp
     Sprint.create!(
@@ -54,7 +49,7 @@ class Api::HealthControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "includes only data freshness when no refresh has run" do
-    # Create a sprint without cache status
+    # Create a sprint without job status
     Sprint.create!(
       start_date: Date.new(2026, 1, 7),
       end_date: Date.new(2026, 1, 20),

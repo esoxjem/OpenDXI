@@ -1,25 +1,30 @@
 # frozen_string_literal: true
 
-# Refreshes GitHub metrics for current and previous sprint.
-#
-# Scheduled to run every hour via Solid Queue recurring tasks.
-#
-# Error Handling:
-# - GitHub API errors are logged and the job completes gracefully
-# - Next hourly run will retry the refresh
-# - Partial success is acceptable (if one sprint fails, others may succeed)
+# Hourly job to refresh GitHub metrics for current and previous sprint.
 class RefreshGithubDataJob < ApplicationJob
   queue_as :default
+  limits_concurrency to: 1, key: -> { "github_refresh" }
 
   def perform
     Rails.logger.info "[RefreshGithubDataJob] Starting hourly refresh"
 
-    Sprint.available_sprints(limit: 2).each do |sprint_info|
+    results = Sprint.available_sprints(limit: 2).map do |sprint_info|
       refresh_sprint(sprint_info)
     end
 
-    cache_status(status: "ok")
-    Rails.logger.info "[RefreshGithubDataJob] Completed successfully"
+    succeeded = results.count(:success)
+    failed = results.count(:failed)
+
+    status = if failed.zero?
+               "ok"
+             elsif succeeded.zero?
+               "failed"
+             else
+               "partial"
+             end
+
+    cache_status(status: status, sprints_succeeded: succeeded, sprints_failed: failed)
+    Rails.logger.info "[RefreshGithubDataJob] Completed: #{succeeded} succeeded, #{failed} failed"
   rescue GithubService::GitHubApiError, Faraday::Error => e
     cache_status(status: "failed", error: e.message)
     Rails.logger.error "[RefreshGithubDataJob] Failed: #{e.class} - #{e.message}"
@@ -34,16 +39,24 @@ class RefreshGithubDataJob < ApplicationJob
 
     Rails.logger.info "[RefreshGithubDataJob] Refreshing #{start_date} to #{end_date}"
     SprintLoader.new.load(start_date, end_date, force: true)
+    :success
   rescue GithubService::GitHubApiError, Faraday::Error => e
     Rails.logger.warn "[RefreshGithubDataJob] Sprint #{start_date} failed: #{e.message}"
-    # Continue with next sprint
+    :failed
   end
 
-  def cache_status(status:, error: nil)
-    Rails.cache.write("github_refresh", {
-      at: Time.current.iso8601,
-      status: status,
-      error: error
-    }.compact)
+  def cache_status(status:, error: nil, sprints_succeeded: nil, sprints_failed: nil)
+    JobStatus.upsert(
+      {
+        name: "github_refresh",
+        status: status,
+        ran_at: Time.current,
+        error: error,
+        sprints_succeeded: sprints_succeeded,
+        sprints_failed: sprints_failed,
+        updated_at: Time.current
+      },
+      unique_by: :name
+    )
   end
 end
