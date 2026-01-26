@@ -23,10 +23,10 @@ class RefreshGithubDataJob < ApplicationJob
                "partial"
              end
 
-    cache_status(status: status, sprints_succeeded: succeeded, sprints_failed: failed)
+    persist_status(status: status, sprints_succeeded: succeeded, sprints_failed: failed)
     Rails.logger.info "[RefreshGithubDataJob] Completed: #{succeeded} succeeded, #{failed} failed"
   rescue GithubService::GitHubApiError, Faraday::Error => e
-    cache_status(status: "failed", error: e.message)
+    persist_status(status: "failed", error: e.message)
     Rails.logger.error "[RefreshGithubDataJob] Failed: #{e.class} - #{e.message}"
     # Don't re-raise - job completes, next hourly run will retry
   end
@@ -45,18 +45,30 @@ class RefreshGithubDataJob < ApplicationJob
     :failed
   end
 
-  def cache_status(status:, error: nil, sprints_succeeded: nil, sprints_failed: nil)
+  def persist_status(status:, error: nil, sprints_succeeded: nil, sprints_failed: nil)
     JobStatus.upsert(
       {
         name: "github_refresh",
         status: status,
         ran_at: Time.current,
-        error: error,
+        error: sanitize_error_message(error),
         sprints_succeeded: sprints_succeeded,
         sprints_failed: sprints_failed,
+        created_at: Time.current,
         updated_at: Time.current
       },
       unique_by: :name
     )
+  end
+
+  def sanitize_error_message(error)
+    return nil if error.nil?
+
+    case error
+    when /rate limit/i then "GitHub API rate limit exceeded"
+    when /authentication|token/i then "GitHub authentication issue"
+    when /connection|timeout/i then "Connection issue with external service"
+    else "An error occurred during data refresh"
+    end
   end
 end

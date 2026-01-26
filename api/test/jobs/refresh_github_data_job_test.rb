@@ -73,7 +73,7 @@ class RefreshGithubDataJobTest < ActiveJob::TestCase
       job_status = JobStatus.find_by(name: "github_refresh")
       assert_not_nil job_status
       assert_equal "failed", job_status.status
-      assert_equal "Rate limited", job_status.error
+      assert_equal "GitHub API rate limit exceeded", job_status.error
     end
   end
 
