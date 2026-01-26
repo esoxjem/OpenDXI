@@ -44,22 +44,17 @@ export function useSprints() {
 /**
  * Hook to fetch metrics for a specific sprint.
  *
- * Implements "stale-while-revalidate" pattern for optimal UX:
- * - Data is considered fresh for 5 minutes
- * - After 5 minutes, data becomes stale but continues showing
- * - Stale data remains in memory for 30 minutes (gcTime)
- * - When component mounts or window gains focus, stale data is revalidated
- * - This enables instant UI rendering with background refetch
+ * Caching strategy:
+ * - Data cached for 1 hour (matches backend's hourly GitHub refresh job)
+ * - Changing sprints via selector fetches new data (different cache key)
+ * - Use the manual "Refresh" button to force-fetch fresh data from GitHub
  */
 export function useMetrics(startDate: string | undefined, endDate: string | undefined) {
   return useQuery<MetricsResponse, Error, MetricsResponse>({
     queryKey: ["metrics", startDate, endDate],
     queryFn: () => fetchMetrics(startDate!, endDate!),
     enabled: !!startDate && !!endDate,
-    staleTime: 1000 * 60 * 5,       // 5 minutes - data considered fresh
-    gcTime: 1000 * 60 * 30,          // 30 minutes - keep in memory for stale-while-revalidate
-    refetchOnMount: true,            // Refetch if data is stale when component mounts
-    refetchOnWindowFocus: true,      // Refetch if data is stale when window regains focus
+    staleTime: 1000 * 60 * 60, // 1 hour - matches backend refresh cycle
   });
 }
 
