@@ -2,6 +2,9 @@
 
 module Api
   class HealthController < BaseController
+    # Health checks must be public for monitoring, load balancers, and Coolify health probes
+    skip_before_action :authenticate!
+
     # GET /api/health
     def show
       render json: {
