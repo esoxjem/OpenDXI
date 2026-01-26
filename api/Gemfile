@@ -6,6 +6,8 @@ gem "rails", "~> 8.1.2"
 gem "sqlite3", ">= 2.1"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
+# Database-backed Active Job backend (runs in Puma via plugin for single-container deploy)
+gem "solid_queue"
 # CORS support for API endpoints (Next.js frontend)
 gem "rack-cors"
 # HTTP client for GitHub API

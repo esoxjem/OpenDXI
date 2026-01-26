@@ -192,6 +192,8 @@ class GithubService
       end
 
       response = Faraday.post(GITHUB_GRAPHQL_URL) do |req|
+        req.options.timeout = 30        # Read timeout (seconds)
+        req.options.open_timeout = 10   # Connection timeout (seconds)
         req.headers["Authorization"] = "Bearer #{token}"
         req.headers["Content-Type"] = "application/json"
         req.body = { query: query, variables: variables }.to_json

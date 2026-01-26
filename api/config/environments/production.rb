@@ -46,8 +46,9 @@ Rails.application.configure do
   # Use memory store for caching (SQLite is already our cache via Sprint model)
   config.cache_store = :memory_store
 
-  # Use inline job adapter (no async jobs needed)
-  config.active_job.queue_adapter = :inline
+  # Use Solid Queue for background jobs (runs in Puma via SOLID_QUEUE_IN_PUMA=1)
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
