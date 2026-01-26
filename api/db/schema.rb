@@ -10,7 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_23_154123) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_26_163736) do
+  create_table "job_statuses", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "error"
+    t.string "name", null: false
+    t.datetime "ran_at"
+    t.integer "sprints_failed"
+    t.integer "sprints_succeeded"
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_job_statuses_on_name", unique: true
+  end
+
   create_table "sprints", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "data"
@@ -18,7 +30,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_154123) do
     t.date "start_date", null: false
     t.datetime "updated_at", null: false
     t.index ["start_date", "end_date"], name: "index_sprints_on_dates_unique", unique: true
-    t.index ["start_date", "end_date"], name: "index_sprints_on_start_date_and_end_date", unique: true
     t.index ["start_date"], name: "index_sprints_on_start_date"
+    t.index ["updated_at"], name: "index_sprints_on_updated_at"
   end
 end
