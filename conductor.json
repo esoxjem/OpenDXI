@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "setup": "cd api && bundle install && cd ../frontend && npm install && ln -sf \"$CONDUCTOR_ROOT_PATH/.env\" api/.env && ln -sf \"$CONDUCTOR_ROOT_PATH/.env.local\" frontend/.env.local",
+    "run": "bin/dev"
+  }
+}
