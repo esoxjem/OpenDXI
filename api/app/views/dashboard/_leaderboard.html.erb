@@ -1,0 +1,62 @@
+<%# locals: (developers:) %>
+<div class="card overflow-hidden">
+  <div class="p-4 border-b flex items-center justify-between">
+    <h3 class="font-semibold">Team Leaderboard</h3>
+    <span class="text-sm text-muted-foreground"><%= developers.size %> developers</span>
+  </div>
+
+  <% if developers.empty? %>
+    <div class="p-6 text-center text-muted-foreground">
+      No developer data available
+    </div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-muted">
+          <tr>
+            <th class="text-left p-3 text-sm font-medium text-muted-foreground">Rank</th>
+            <th class="text-left p-3 text-sm font-medium text-muted-foreground">Developer</th>
+            <th class="text-right p-3 text-sm font-medium text-muted-foreground">DXI Score</th>
+            <th class="text-right p-3 text-sm font-medium text-muted-foreground">Commits</th>
+            <th class="text-right p-3 text-sm font-medium text-muted-foreground">PRs Merged</th>
+            <th class="text-right p-3 text-sm font-medium text-muted-foreground">Reviews</th>
+            <th class="text-right p-3 text-sm font-medium text-muted-foreground">Cycle Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% sorted_developers(developers, :dxi_score, "desc").each_with_index do |dev, index| %>
+            <tr class="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                onclick="Turbo.visit('<%= dashboard_path(sprint: @selected_sprint, view: "developers", developer: dev[:developer]) %>')">
+              <td class="p-3">
+                <% if index < 3 %>
+                  <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                    <%= index + 1 %>
+                  </span>
+                <% else %>
+                  <span class="text-muted-foreground pl-2"><%= index + 1 %></span>
+                <% end %>
+              </td>
+              <td class="p-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                    <%= dev[:developer]&.first&.upcase || "?" %>
+                  </div>
+                  <span class="font-medium"><%= dev[:developer] %></span>
+                </div>
+              </td>
+              <td class="p-3 text-right">
+                <span class="score-badge <%= score_badge_class(dev[:dxi_score]) %>">
+                  <%= dev[:dxi_score]&.round || "--" %>
+                </span>
+              </td>
+              <td class="p-3 text-right font-mono"><%= format_number(dev[:commits]) %></td>
+              <td class="p-3 text-right font-mono"><%= format_number(dev[:prs_merged]) %></td>
+              <td class="p-3 text-right font-mono"><%= format_number(dev[:reviews_given]) %></td>
+              <td class="p-3 text-right"><%= format_hours(dev[:avg_cycle_time_hours]) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* OKLCH Color System - Perceptually uniform colors */
+:root {
+  --radius: 0.625rem;
+  --background: 1 0 0;
+  --foreground: 0.145 0 0;
+  --card: 1 0 0;
+  --card-foreground: 0.145 0 0;
+  --primary: 0.205 0 0;
+  --primary-foreground: 0.985 0 0;
+  --muted: 0.97 0 0;
+  --muted-foreground: 0.556 0 0;
+  --destructive: 0.577 0.245 27.325;
+  --border: 0.922 0 0;
+  --ring: 0.708 0 0;
+  --chart-1: 0.646 0.222 41.116;
+  --chart-2: 0.6 0.118 184.704;
+  --chart-3: 0.398 0.07 227.392;
+  --success: 0.6 0.15 145;
+  --warning: 0.7 0.15 85;
+}
+
+.dark {
+  --background: 0.145 0 0;
+  --foreground: 0.985 0 0;
+  --card: 0.205 0 0;
+  --card-foreground: 0.985 0 0;
+  --muted: 0.269 0 0;
+  --muted-foreground: 0.708 0 0;
+  --primary: 0.985 0 0;
+  --primary-foreground: 0.205 0 0;
+  --border: 0.269 0 0;
+}
+
+/* Base styles */
+* {
+  border-color: oklch(var(--border));
+}
+
+body {
+  background-color: oklch(var(--background));
+  color: oklch(var(--foreground));
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Utility classes for semantic colors */
+.bg-background { background-color: oklch(var(--background)); }
+.bg-foreground { background-color: oklch(var(--foreground)); }
+.bg-card { background-color: oklch(var(--card)); }
+.bg-primary { background-color: oklch(var(--primary)); }
+.bg-muted { background-color: oklch(var(--muted)); }
+.bg-destructive { background-color: oklch(var(--destructive)); }
+
+.text-foreground { color: oklch(var(--foreground)); }
+.text-card-foreground { color: oklch(var(--card-foreground)); }
+.text-primary { color: oklch(var(--primary)); }
+.text-primary-foreground { color: oklch(var(--primary-foreground)); }
+.text-muted-foreground { color: oklch(var(--muted-foreground)); }
+.text-destructive { color: oklch(var(--destructive)); }
+.text-success { color: oklch(var(--success)); }
+.text-warning { color: oklch(var(--warning)); }
+
+.border-border { border-color: oklch(var(--border)); }
+.border-primary { border-color: oklch(var(--primary)); }
+
+.ring-ring { --tw-ring-color: oklch(var(--ring)); }
+
+/* Basic transitions for hover effects */
+.hover-lift {
+  transition: transform 200ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Card component */
+.card {
+  background-color: oklch(var(--card));
+  color: oklch(var(--card-foreground));
+  border-radius: var(--radius);
+  border: 1px solid oklch(var(--border));
+}
+
+/* Button variants */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 150ms ease, transform 150ms ease;
+  cursor: pointer;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background-color: oklch(var(--primary));
+  color: oklch(var(--primary-foreground));
+}
+
+.btn-primary:hover {
+  background-color: oklch(var(--primary) / 0.9);
+}
+
+.btn-outline {
+  border: 1px solid oklch(var(--border));
+  background-color: transparent;
+}
+
+.btn-outline:hover {
+  background-color: oklch(var(--muted));
+}
+
+.btn-ghost {
+  background-color: transparent;
+}
+
+.btn-ghost:hover {
+  background-color: oklch(var(--muted));
+}
+
+/* Form elements */
+.input {
+  display: flex;
+  height: 2.5rem;
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid oklch(var(--border));
+  background-color: oklch(var(--background));
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: oklch(var(--ring));
+}
+
+.select {
+  display: flex;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  border: 1px solid oklch(var(--border));
+  background-color: oklch(var(--background));
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Tab navigation */
+.tab {
+  padding: 0.5rem 0.25rem;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+  color: oklch(var(--muted-foreground));
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.tab:hover {
+  color: oklch(var(--foreground));
+}
+
+.tab-active {
+  color: oklch(var(--foreground));
+  border-bottom-color: oklch(var(--primary));
+  font-weight: 500;
+}
+
+/* Score badges */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.score-good {
+  background-color: oklch(var(--success) / 0.15);
+  color: oklch(var(--success));
+}
+
+.score-moderate {
+  background-color: oklch(var(--warning) / 0.15);
+  color: oklch(var(--warning));
+}
+
+.score-needs-improvement {
+  background-color: oklch(var(--destructive) / 0.15);
+  color: oklch(var(--destructive));
+}
+
+/* Trend indicators */
+.trend-up {
+  color: oklch(var(--success));
+}
+
+.trend-down {
+  color: oklch(var(--destructive));
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    oklch(var(--muted)) 0%,
+    oklch(var(--muted) / 0.5) 50%,
+    oklch(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -1,0 +1,40 @@
+<%# locals: (history:) %>
+<div class="card p-4">
+  <h3 class="font-semibold mb-4">DXI Score Trend</h3>
+
+  <% if history.present? %>
+    <%
+      # Reverse to show oldest first (left to right)
+      chart_data = history.reverse.map do |sprint|
+        [sprint[:label], sprint[:avg_dxi_score]&.round(1) || 0]
+      end
+    %>
+
+    <%= line_chart chart_data,
+        height: "200px",
+        colors: ["#3b82f6"],
+        library: {
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: "rgba(0,0,0,0.05)" }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          elements: {
+            line: { tension: 0.3 },
+            point: { radius: 4, hoverRadius: 6 }
+          }
+        } %>
+  <% else %>
+    <div class="flex items-center justify-center h-[200px] text-muted-foreground">
+      No historical data available
+    </div>
+  <% end %>
+</div>

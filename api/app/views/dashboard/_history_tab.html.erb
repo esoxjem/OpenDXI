@@ -1,0 +1,59 @@
+<div class="space-y-6">
+  <% if @sprint_history.blank? %>
+    <div class="card p-6">
+      <div class="flex items-center justify-center gap-2 text-muted-foreground">
+        <span>No sprint history available yet.</span>
+      </div>
+    </div>
+  <% else %>
+    <%# Trend Chart %>
+    <%= render "trend_chart", history: @sprint_history %>
+
+    <%# Sprint History Table %>
+    <div class="card overflow-hidden">
+      <div class="p-4 border-b">
+        <h3 class="font-semibold">Sprint History</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-muted">
+            <tr>
+              <th class="text-left p-3 text-sm font-medium text-muted-foreground">Sprint</th>
+              <th class="text-right p-3 text-sm font-medium text-muted-foreground">DXI Score</th>
+              <th class="text-right p-3 text-sm font-medium text-muted-foreground">Commits</th>
+              <th class="text-right p-3 text-sm font-medium text-muted-foreground">PRs</th>
+              <th class="text-right p-3 text-sm font-medium text-muted-foreground">Reviews</th>
+              <th class="text-right p-3 text-sm font-medium text-muted-foreground"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @sprint_history.each_with_index do |sprint, index| %>
+              <tr class="border-b last:border-0 hover:bg-muted/50">
+                <td class="p-3">
+                  <div class="font-medium"><%= sprint[:label] %></div>
+                  <div class="text-xs text-muted-foreground">
+                    <%= sprint[:start_date]&.strftime("%b %d") %> - <%= sprint[:end_date]&.strftime("%b %d") %>
+                  </div>
+                </td>
+                <td class="p-3 text-right">
+                  <span class="score-badge <%= score_badge_class(sprint[:avg_dxi_score]) %>">
+                    <%= sprint[:avg_dxi_score]&.round || "--" %>
+                  </span>
+                </td>
+                <td class="p-3 text-right font-mono"><%= format_number(sprint[:total_commits]) %></td>
+                <td class="p-3 text-right font-mono"><%= format_number(sprint[:total_prs]) %></td>
+                <td class="p-3 text-right font-mono"><%= format_number(sprint[:total_reviews]) %></td>
+                <td class="p-3 text-right">
+                  <%= link_to "View →",
+                      dashboard_path(sprint: "#{sprint[:start_date]}|#{sprint[:end_date]}", view: "team"),
+                      class: "text-sm text-primary hover:underline",
+                      data: { turbo_frame: "_top" } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

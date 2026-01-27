@@ -8,10 +8,22 @@ gem "sqlite3", ">= 2.1"
 gem "puma", ">= 5.0"
 # Database-backed Active Job backend (runs in Puma via plugin for single-container deploy)
 gem "solid_queue"
-# CORS support for API endpoints (Next.js frontend)
-gem "rack-cors"
 # HTTP client for GitHub API
 gem "faraday", "~> 2.0"
+
+# Asset pipeline
+gem "propshaft"
+gem "importmap-rails"
+
+# Hotwire for SPA-like interactivity
+gem "turbo-rails"
+gem "stimulus-rails"
+
+# CSS
+gem "tailwindcss-rails"
+
+# Charts (Chartkick for easy Rails integration)
+gem "chartkick"
 
 # Authentication via GitHub OAuth
 gem "omniauth", "~> 2.1"
@@ -54,7 +66,7 @@ group :development, :test do
 end
 
 group :development do
-  # Development-only gems (none currently needed for API-only)
+  gem "hotwire-livereload"
 end
 
 group :test do

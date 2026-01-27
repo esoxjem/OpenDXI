@@ -1,0 +1,54 @@
+<%# locals: (scores:, developer_scores: nil, title: "DXI Dimensions") %>
+<div class="card p-4">
+  <h3 class="font-semibold mb-4"><%= title %></h3>
+
+  <% if scores.present? %>
+    <%
+      labels = ["Review Speed", "Cycle Time", "PR Size", "Review Coverage", "Commit Freq."]
+      team_data = [
+        (scores[:review_speed] || scores["review_speed"])&.round || 0,
+        (scores[:cycle_time] || scores["cycle_time"])&.round || 0,
+        (scores[:pr_size] || scores["pr_size"])&.round || 0,
+        (scores[:review_coverage] || scores["review_coverage"])&.round || 0,
+        (scores[:commit_frequency] || scores["commit_frequency"])&.round || 0
+      ]
+
+      datasets = [{
+        label: "Team",
+        data: team_data,
+        backgroundColor: "rgba(0,0,0,0.08)",
+        borderColor: "oklch(0.205 0 0)",
+        borderWidth: 2,
+        pointBackgroundColor: "oklch(0.205 0 0)"
+      }]
+
+      if developer_scores
+        dev_data = [
+          (developer_scores[:review_speed] || developer_scores["review_speed"])&.round || 0,
+          (developer_scores[:cycle_time] || developer_scores["cycle_time"])&.round || 0,
+          (developer_scores[:pr_size] || developer_scores["pr_size"])&.round || 0,
+          (developer_scores[:review_coverage] || developer_scores["review_coverage"])&.round || 0,
+          (developer_scores[:commit_frequency] || developer_scores["commit_frequency"])&.round || 0
+        ]
+        datasets << {
+          label: "Developer",
+          data: dev_data,
+          backgroundColor: "rgba(59, 130, 246, 0.15)",
+          borderColor: "#3b82f6",
+          borderWidth: 2,
+          pointBackgroundColor: "#3b82f6"
+        }
+      end
+    %>
+
+    <div data-controller="radar-chart"
+         data-radar-chart-labels-value="<%= labels.to_json %>"
+         data-radar-chart-datasets-value="<%= datasets.to_json %>">
+      <canvas data-radar-chart-target="canvas" class="max-h-[300px]"></canvas>
+    </div>
+  <% else %>
+    <div class="flex items-center justify-center h-[300px] text-muted-foreground">
+      No dimension data available
+    </div>
+  <% end %>
+</div>

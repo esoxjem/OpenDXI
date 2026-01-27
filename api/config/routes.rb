@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   # ═══════════════════════════════════════════════════════════════════════════
-  # Health Check (PUBLIC - no auth required)
+  # Health Check (PUBLIC - for Docker/Coolify monitoring)
   # ═══════════════════════════════════════════════════════════════════════════
   get "up" => "rails/health#show", as: :rails_health_check
 
@@ -18,23 +18,25 @@ Rails.application.routes.draw do
   delete "/auth/logout", to: "sessions#destroy"
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # API Routes (JSON API for Next.js frontend)
+  # Dashboard Routes (Full-stack Rails views)
+  # ═══════════════════════════════════════════════════════════════════════════
+  root "dashboard#index"
+
+  get "login", to: "sessions#new", as: :login
+
+  # Dashboard with view param for tab content
+  # GET /?view=team (default)
+  # GET /?view=developers&developer=alice
+  # GET /?view=history
+  get "dashboard", to: "dashboard#index"
+
+  # Refresh action - fetches fresh data from GitHub
+  post "dashboard/refresh", to: "dashboard#refresh"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # API Routes (Minimal - health check only for external monitoring)
   # ═══════════════════════════════════════════════════════════════════════════
   namespace :api do
-    # Auth status endpoint
-    get "auth/me", to: "auth#me"
-
-    # Existing endpoints (protected by authentication)
     get "health", to: "health#show"
-    get "config", to: "config#show"
-
-    # Sprint endpoints
-    get "sprints", to: "sprints#index"
-    get "sprints/history", to: "sprints#history"
-    get "sprints/:start_date/:end_date/metrics", to: "sprints#metrics", as: :sprint_metrics
-
-    # Developer endpoints
-    get "developers", to: "developers#index"
-    get "developers/:name/history", to: "developers#history", as: :developer_history
   end
 end

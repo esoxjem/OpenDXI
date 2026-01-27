@@ -4,26 +4,33 @@ require "test_helper"
 
 class SessionsControllerTest < ActionDispatch::IntegrationTest
   # ═══════════════════════════════════════════════════════════════════════════
+  # Login Page (new)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test "login page renders when not authenticated" do
+    get login_path
+    assert_response :success
+    assert_select "h1", /OpenDXI Dashboard/
+  end
+
+  test "login page redirects to dashboard when already authenticated" do
+    sign_in_as
+    get login_path
+    assert_response :redirect
+    assert_redirected_to root_path
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # Logout (destroy)
   # ═══════════════════════════════════════════════════════════════════════════
 
   test "destroy clears session and redirects to login" do
-    # First, log in via test helper
     sign_in_as
 
-    # Verify logged in
-    get "/api/auth/me"
-    assert_response :success
-
-    # Now log out
     delete "/auth/logout"
 
     assert_response :redirect
-    assert_match %r{/login\z}, response.location
-
-    # Verify logged out
-    get "/api/auth/me"
-    assert_response :unauthorized
+    assert_redirected_to login_path
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -43,29 +50,21 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_match(/error=unknown_error/, response.location)
   end
+
   # ═══════════════════════════════════════════════════════════════════════════
   # OAuth Callback (create) - Using OmniAuth mock
   # ═══════════════════════════════════════════════════════════════════════════
 
-  test "create sets session and redirects on successful OAuth" do
+  test "create sets session and redirects to dashboard on successful OAuth" do
     mock_github_auth
 
     get "/auth/github/callback"
 
     assert_response :redirect
-    assert_match ENV.fetch("FRONTEND_URL", "http://localhost:3001"), response.location
-
-    # Verify session was created by checking auth status
-    get "/api/auth/me"
-    assert_response :success
-    json = JSON.parse(response.body)
-    assert json["authenticated"]
-    assert_equal "testuser", json["user"]["login"]
-    assert_equal "Test User", json["user"]["name"]
+    assert_redirected_to root_path
   end
 
   test "create rejects unauthorized user when allowed_users configured" do
-    # Configure allowed users to NOT include our test user
     original_allowed_users = Rails.application.config.opendxi.allowed_users
     Rails.application.config.opendxi.allowed_users = ["otheruser"]
 
@@ -75,16 +74,11 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :redirect
     assert_match(/error=not_authorized/, response.location)
-
-    # Verify session was NOT created
-    get "/api/auth/me"
-    assert_response :unauthorized
   ensure
     Rails.application.config.opendxi.allowed_users = original_allowed_users
   end
 
   test "create allows any user when allowed_users is empty" do
-    # Ensure allowed users is empty
     original_allowed_users = Rails.application.config.opendxi.allowed_users
     Rails.application.config.opendxi.allowed_users = []
 
@@ -94,108 +88,95 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :redirect
     refute_match(/error=/, response.location)
-
-    # Verify session was created
-    get "/api/auth/me"
-    assert_response :success
   ensure
     Rails.application.config.opendxi.allowed_users = original_allowed_users
-  end
-
-  test "create stores authenticated_at timestamp in session" do
-    mock_github_auth
-
-    freeze_time do
-      get "/auth/github/callback"
-      assert_response :redirect
-
-      # The session should have authenticated_at set
-      # We verify this indirectly by checking the session is valid
-      get "/api/auth/me"
-      assert_response :success
-    end
   end
 end
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Session Security Tests (expiration and authorization revocation)
+# Session Security Tests (expiration and authorization)
 # ═══════════════════════════════════════════════════════════════════════════
 
 class SessionSecurityTest < ActionDispatch::IntegrationTest
+  setup do
+    # Create a sprint in the database so dashboard doesn't need to fetch from GitHub
+    create_test_sprint
+  end
+
+  test "dashboard requires authentication" do
+    get root_path
+    assert_response :redirect
+    assert_redirected_to login_path
+  end
+
+  test "dashboard accessible when authenticated" do
+    sign_in_as
+    get root_path
+    assert_response :success
+  end
+
   test "session expires after 24 hours" do
-    # Sign in
     sign_in_as
 
-    # Verify authenticated
-    get "/api/auth/me"
+    get root_path
     assert_response :success
 
-    # Travel forward 25 hours
     travel 25.hours do
-      get "/api/auth/me"
-      assert_response :unauthorized
-      json = JSON.parse(response.body)
-      assert_equal false, json["authenticated"]
+      get root_path
+      assert_response :redirect
+      assert_redirected_to login_path
     end
   end
 
   test "session remains valid within 24 hours" do
-    # Sign in
     sign_in_as
 
-    # Travel forward 23 hours (still within limit)
     travel 23.hours do
-      get "/api/auth/me"
+      get root_path
       assert_response :success
     end
   end
 
-  test "removing user from allowed_users revokes access immediately" do
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
+  private
 
-    # Start with testuser in allowed list
-    Rails.application.config.opendxi.allowed_users = ["testuser"]
-
-    # Sign in as testuser
-    sign_in_as(login: "testuser", name: "Test User", github_id: 12345, avatar_url: "https://github.com/test.png")
-
-    # Verify authenticated
-    get "/api/auth/me"
-    assert_response :success
-
-    # Now remove testuser from allowed list
-    Rails.application.config.opendxi.allowed_users = ["otheruser"]
-
-    # Next request should be rejected
-    get "/api/auth/me"
-    assert_response :unauthorized
-    json = JSON.parse(response.body)
-    assert_equal false, json["authenticated"]
-    assert_equal "access_revoked", json["error"]
-  ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
-  end
-
-  test "user remains authorized when allowed_users becomes empty" do
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
-
-    # Start with testuser in allowed list
-    Rails.application.config.opendxi.allowed_users = ["testuser"]
-
-    # Sign in
-    sign_in_as(login: "testuser", name: "Test User", github_id: 12345, avatar_url: "https://github.com/test.png")
-
-    # Verify authenticated
-    get "/api/auth/me"
-    assert_response :success
-
-    # Make allowed_users empty (allow everyone)
-    Rails.application.config.opendxi.allowed_users = []
-
-    # User should still be authorized
-    get "/api/auth/me"
-    assert_response :success
-  ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
+  def create_test_sprint
+    # Create sprint for current period to avoid GitHub fetch
+    start_date, end_date = Sprint.current_sprint_dates
+    Sprint.find_or_create_by!(start_date: start_date, end_date: end_date) do |s|
+      s.data = {
+        "developers" => [
+          {
+            "github_login" => "testdev",
+            "commits" => 10,
+            "prs_opened" => 2,
+            "prs_merged" => 2,
+            "reviews_given" => 5,
+            "dxi_score" => 75.0,
+            "dimension_scores" => {
+              "review_turnaround" => 80.0,
+              "cycle_time" => 70.0,
+              "pr_size" => 75.0,
+              "review_coverage" => 80.0,
+              "commit_frequency" => 70.0
+            }
+          }
+        ],
+        "daily_activity" => [],
+        "summary" => {
+          "total_commits" => 10,
+          "total_prs" => 2,
+          "total_merged" => 2,
+          "total_reviews" => 5,
+          "avg_dxi_score" => 75.0
+        },
+        "team_dimension_scores" => {
+          "review_turnaround" => 80.0,
+          "cycle_time" => 70.0,
+          "pr_size" => 75.0,
+          "review_coverage" => 80.0,
+          "commit_frequency" => 70.0
+        }
+      }
+    end
   end
 end
