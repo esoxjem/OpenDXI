@@ -1,0 +1,26 @@
+<div class="space-y-6">
+  <% if @metrics.blank? || @metrics[:developers].blank? %>
+    <div class="card p-6">
+      <div class="flex items-center justify-center gap-2 text-muted-foreground">
+        <span>No developer data available for this sprint.</span>
+      </div>
+    </div>
+  <% else %>
+    <% if @developer %>
+      <%# Developer Detail View %>
+      <%= render "developer_detail", developer: @developer, team_scores: @metrics[:team_dimension_scores] %>
+    <% else %>
+      <%# Developer Grid %>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Developers</h2>
+        <span class="text-sm text-muted-foreground"><%= @metrics[:developers].size %> active this sprint</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <% @metrics[:developers].each do |dev| %>
+          <%= render "developer_card", developer: dev %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

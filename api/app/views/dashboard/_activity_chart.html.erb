@@ -1,0 +1,33 @@
+<%# locals: (daily:) %>
+<div class="card p-4">
+  <h3 class="font-semibold mb-4">Activity Timeline</h3>
+
+  <% if daily.present? %>
+    <%= area_chart [
+      { name: "Commits", data: daily.map { |d| [(d["date"] || d[:date]), (d["commits"] || d[:commits] || 0)] } },
+      { name: "PRs Merged", data: daily.map { |d| [(d["date"] || d[:date]), (d["prs_merged"] || d[:prs_merged] || 0)] } },
+      { name: "Reviews", data: daily.map { |d| [(d["date"] || d[:date]), (d["reviews_given"] || d[:reviews_given] || 0)] } }
+    ],
+    stacked: true,
+    height: "300px",
+    colors: ["#3b82f6", "#22c55e", "#a855f7"],
+    library: {
+      plugins: {
+        legend: { position: "bottom" }
+      },
+      scales: {
+        x: {
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(0,0,0,0.05)" }
+        }
+      }
+    } %>
+  <% else %>
+    <div class="flex items-center justify-center h-[300px] text-muted-foreground">
+      No activity data available
+    </div>
+  <% end %>
+</div>

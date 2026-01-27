@@ -1,2 +1,2 @@
-api: cd api && bin/rails server -p 3000
-web: cd frontend && npm run dev -- -p 3001
+web: cd api && bin/rails server -p 3000
+css: cd api && bin/rails tailwindcss:watch

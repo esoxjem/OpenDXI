@@ -1,0 +1,79 @@
+<main class="container mx-auto py-6 px-4">
+  <%# Header %>
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold"><%= github_org %> DXI Dashboard</h1>
+      <p class="text-muted-foreground text-sm">Developer Experience Index</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <%# Sprint Selector %>
+      <%= form_with url: dashboard_path, method: :get, data: { turbo_frame: "_top", controller: "auto-submit" } do |f| %>
+        <%= f.select :sprint,
+            options_for_select(@sprints.map { |s| [s[:label], s[:value]] }, @selected_sprint),
+            {},
+            class: "select", data: { action: "change->auto-submit#submit" } %>
+        <%= f.hidden_field :view, value: @view %>
+        <noscript><%= f.submit "Go", class: "btn btn-outline" %></noscript>
+      <% end %>
+
+      <%# Refresh Button %>
+      <%= button_to dashboard_refresh_path(sprint: @selected_sprint, view: @view),
+          method: :post,
+          class: "btn btn-outline",
+          data: { turbo_confirm: "Refresh data from GitHub? This may take a few seconds." } do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+        <span class="hidden sm:inline">Refresh</span>
+      <% end %>
+
+      <%# User Menu %>
+      <% if current_user %>
+        <div class="flex items-center gap-2 ml-2 pl-2 border-l">
+          <% if current_user[:avatar_url] %>
+            <img src="<%= current_user[:avatar_url] %>" class="h-8 w-8 rounded-full" alt="<%= current_user[:login] %>">
+          <% end %>
+          <span class="hidden sm:inline text-sm"><%= current_user[:login] %></span>
+          <%= button_to "/auth/logout", method: :delete, class: "btn btn-ghost text-sm" do %>
+            Logout
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Tab Navigation %>
+  <div class="border-b mb-6">
+    <nav class="flex gap-4" role="tablist">
+      <%= link_to "Team Overview",
+          dashboard_path(sprint: @selected_sprint, view: "team"),
+          class: "tab #{@view == 'team' ? 'tab-active' : ''}",
+          data: { turbo_frame: "tab-content" },
+          role: "tab",
+          "aria-selected": @view == "team" %>
+
+      <%= link_to "Developers",
+          dashboard_path(sprint: @selected_sprint, view: "developers"),
+          class: "tab #{@view == 'developers' ? 'tab-active' : ''}",
+          data: { turbo_frame: "tab-content" },
+          role: "tab",
+          "aria-selected": @view == "developers" %>
+
+      <%= link_to "History",
+          dashboard_path(sprint: @selected_sprint, view: "history"),
+          class: "tab #{@view == 'history' ? 'tab-active' : ''}",
+          data: { turbo_frame: "tab-content" },
+          role: "tab",
+          "aria-selected": @view == "history" %>
+    </nav>
+  </div>
+
+  <%# Tab Content (Turbo Frame for instant switching) %>
+  <%= turbo_frame_tag "tab-content", data: { turbo_action: "advance" } do %>
+    <%= render "#{@view}_tab" %>
+  <% end %>
+</main>

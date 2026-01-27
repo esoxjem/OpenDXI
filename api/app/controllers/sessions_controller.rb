@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class SessionsController < ApplicationController
+  def new
+    # Login page - already logged in users go to dashboard
+    redirect_to root_path if session[:user].present?
+  end
+
   def create
     auth = request.env["omniauth.auth"]
 
@@ -13,24 +18,24 @@ class SessionsController < ApplicationController
 
     # Verify user is in allowed list (if configured)
     unless authorized_user?(user_info[:login])
-      redirect_to failure_url("not_authorized"), allow_other_host: true
+      redirect_to login_path(error: "not_authorized")
       return
     end
 
     session[:user] = user_info
     session[:authenticated_at] = Time.current.iso8601
 
-    redirect_to frontend_url, allow_other_host: true
+    redirect_to root_path, notice: "Logged in as #{user_info[:login]}"
   end
 
   def destroy
     reset_session
-    redirect_to "#{frontend_url}/login", allow_other_host: true
+    redirect_to login_path, notice: "Logged out successfully"
   end
 
   def failure
     error = params[:message] || "unknown_error"
-    redirect_to failure_url(error), allow_other_host: true
+    redirect_to login_path(error: error)
   end
 
   private
@@ -40,13 +45,5 @@ class SessionsController < ApplicationController
     return true if allowed_users.empty?
 
     allowed_users.include?(username.downcase)
-  end
-
-  def frontend_url
-    ENV.fetch("FRONTEND_URL", "http://localhost:3001")
-  end
-
-  def failure_url(error)
-    "#{frontend_url}/login?error=#{error}"
   end
 end

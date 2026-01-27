@@ -1,0 +1,51 @@
+<%# locals: (developer:) %>
+<%= link_to dashboard_path(sprint: @selected_sprint, view: "developers", developer: developer[:developer]),
+    class: "card p-4 hover-lift block",
+    data: { turbo_frame: "tab-content" } do %>
+  <div class="flex items-start justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+        <%= developer[:developer]&.first&.upcase || "?" %>
+      </div>
+      <div>
+        <h4 class="font-medium"><%= developer[:developer] %></h4>
+        <span class="text-xs text-muted-foreground"><%= score_label(developer[:dxi_score]) %></span>
+      </div>
+    </div>
+    <span class="score-badge <%= score_badge_class(developer[:dxi_score]) %>">
+      <%= developer[:dxi_score]&.round || "--" %>
+    </span>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2 text-center text-sm">
+    <div>
+      <div class="font-semibold"><%= format_number(developer[:commits]) %></div>
+      <div class="text-xs text-muted-foreground">Commits</div>
+    </div>
+    <div>
+      <div class="font-semibold"><%= format_number(developer[:prs_merged]) %></div>
+      <div class="text-xs text-muted-foreground">PRs</div>
+    </div>
+    <div>
+      <div class="font-semibold"><%= format_number(developer[:reviews_given]) %></div>
+      <div class="text-xs text-muted-foreground">Reviews</div>
+    </div>
+  </div>
+
+  <%# Mini dimension bars %>
+  <% if developer[:dimension_scores] %>
+    <div class="mt-3 space-y-1">
+      <% %w[review_speed cycle_time pr_size review_coverage commit_frequency].each do |dim| %>
+        <% score = developer[:dimension_scores][dim.to_sym] || developer[:dimension_scores][dim] %>
+        <% if score %>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-muted-foreground w-20 truncate"><%= dimension_label(dim) %></span>
+            <div class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div class="h-full <%= dimension_bar_class(score) %> rounded-full" style="width: <%= dimension_bar_width(score) %>%"></div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

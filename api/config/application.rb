@@ -1,7 +1,7 @@
 require_relative "boot"
 
 require "rails"
-# Pick the frameworks you want (API-only mode):
+# Pick the frameworks you want (full-stack mode):
 require "active_model/railtie"
 require "active_job/railtie"
 require "active_record/railtie"
@@ -10,8 +10,8 @@ require "action_controller/railtie"
 # require "action_mailer/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
-# require "action_view/railtie"  # Not needed for API-only
-# require "action_cable/engine"  # Not needed for API-only
+require "action_view/railtie"
+# require "action_cable/engine"
 require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
@@ -23,27 +23,18 @@ module OpendxiRails
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 
-    # API-only mode - but with sessions for OAuth
-    config.api_only = true
-
-    # Re-add session middleware for OAuth (required for API-only mode)
-    config.middleware.use ActionDispatch::Cookies
-    config.middleware.use ActionDispatch::Session::CookieStore,
+    # Full-stack mode with session configuration
+    config.session_store :cookie_store,
       key: "_opendxi_session",
-      # SameSite=None requires Secure=true, which doesn't work in dev (http)
-      # Use Lax in development (works for same-site navigation from different ports)
-      # Use None+Secure in production (works for true cross-origin with HTTPS)
-      same_site: Rails.env.production? ? :none : :lax,
+      same_site: :lax,
       secure: Rails.env.production?,
-      httponly: true  # Explicit is better than implicit for security
+      httponly: true
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Add serializer concerns to autoload paths (not included by default like model/controller concerns)
-    config.autoload_paths << Rails.root.join("app/serializers/concerns")
 
     # Configuration for the application, engines, and railties goes here.
     #

@@ -1,0 +1,37 @@
+<%# locals: (title:, value:, subtitle: nil, sparkline_data: nil, current_value: nil, previous_value: nil, invert_trend: false, score_badge: false) %>
+<div class="card p-4 h-full hover-lift">
+  <p class="text-sm text-muted-foreground mb-1"><%= title %></p>
+
+  <div class="flex items-baseline gap-2">
+    <% if score_badge && current_value %>
+      <h3 class="text-2xl font-bold <%= score_text_class(current_value) %>"><%= value %></h3>
+    <% else %>
+      <h3 class="text-2xl font-bold"><%= value %></h3>
+    <% end %>
+
+    <% trend = trend_indicator(current_value, previous_value, invert: invert_trend) %>
+    <% if trend %>
+      <span class="flex items-center gap-0.5 text-xs <%= trend[:class] %>">
+        <%= trend[:arrow] %>
+        <%= trend[:sign] %><%= trend[:value] %>
+      </span>
+    <% end %>
+  </div>
+
+  <% if subtitle %>
+    <p class="text-xs text-muted-foreground mt-1"><%= subtitle %></p>
+  <% end %>
+
+  <% if sparkline_data.present? && sparkline_data.length > 1 %>
+    <div class="mt-3 h-10">
+      <%= area_chart sparkline_data.map.with_index { |v, i| [i, v || 0] },
+          height: "40px",
+          colors: ["oklch(0.205 0 0)"],
+          library: {
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false } },
+            elements: { point: { radius: 0 } }
+          } %>
+    </div>
+  <% end %>
+</div>

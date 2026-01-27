@@ -1,0 +1,58 @@
+<div class="space-y-6">
+  <% if @metrics.blank? %>
+    <div class="card p-6">
+      <div class="flex items-center justify-center gap-2 text-muted-foreground">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>No sprint data available. Click "Refresh" to fetch data from GitHub.</span>
+      </div>
+    </div>
+  <% else %>
+    <%# KPI Cards %>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <%= render "kpi_card",
+          title: "DXI Score",
+          value: @metrics.dig(:summary, :avg_dxi_score)&.round.to_s || "--",
+          subtitle: score_label(@metrics.dig(:summary, :avg_dxi_score)),
+          sparkline_data: @metrics[:developers]&.first(10)&.map { |d| d[:dxi_score] },
+          current_value: @metrics.dig(:summary, :avg_dxi_score),
+          previous_value: @previous_metrics&.dig(:avg_dxi_score),
+          score_badge: true %>
+
+      <%= render "kpi_card",
+          title: "Commits",
+          value: format_number(@metrics.dig(:summary, :total_commits)),
+          sparkline_data: @metrics[:daily]&.map { |d| d["commits"] || d[:commits] },
+          current_value: @metrics.dig(:summary, :total_commits),
+          previous_value: @previous_metrics&.dig(:total_commits) %>
+
+      <%= render "kpi_card",
+          title: "PR Cycle Time",
+          value: format_hours(@metrics.dig(:summary, :avg_cycle_time_hours) || @metrics[:developers]&.first&.dig(:avg_cycle_time_hours)),
+          current_value: @metrics.dig(:team_dimension_scores, :cycle_time),
+          previous_value: @previous_metrics&.dig(:dimension_scores, :cycle_time),
+          invert_trend: true %>
+
+      <%= render "kpi_card",
+          title: "Review Time",
+          value: format_hours(@metrics.dig(:summary, :avg_review_time_hours) || @metrics[:developers]&.first&.dig(:avg_review_time_hours)),
+          current_value: @metrics.dig(:team_dimension_scores, :review_speed),
+          previous_value: @previous_metrics&.dig(:dimension_scores, :review_speed),
+          invert_trend: true %>
+    </div>
+
+    <%# Charts Row %>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2">
+        <%= render "activity_chart", daily: @metrics[:daily] || [] %>
+      </div>
+      <%= render "radar_chart", scores: @metrics[:team_dimension_scores] %>
+    </div>
+
+    <%# Leaderboard %>
+    <%= render "leaderboard", developers: @metrics[:developers] || [] %>
+  <% end %>
+</div>
