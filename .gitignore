@@ -1,5 +1,6 @@
 # Local data
 .data
+screenshots
 
 # Python
 __pycache__/
