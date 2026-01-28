@@ -1,5 +1,5 @@
 # Local data
-.data/
+.data
 
 # Python
 __pycache__/
@@ -38,7 +38,7 @@ build/
 .env.local
 
 # Claude Code
-.claude/**
+.claude
 .mcp.json
 CLAUDE.md
 todos/
