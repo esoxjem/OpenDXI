@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "setup": "cd api && bundle install && cd ../frontend && npm install && cd .. && ln -sf \"$CONDUCTOR_ROOT_PATH/.env\" api/.env && ln -sf \"$CONDUCTOR_ROOT_PATH/.env.local\" frontend/.env.local",
+    "setup": "cd api && bundle install && cd ../frontend && npm install && cd .. && ln -sf \"$CONDUCTOR_ROOT_PATH/.env\" ./api/.env && ln -sf \"$CONDUCTOR_ROOT_PATH/.env.local\" ./frontend/.env.local && bin/rails db:migrate",
     "run": "lsof -ti :3000 -ti :3001 2>/dev/null | xargs kill -9 2>/dev/null; bin/dev"
   }
 }
