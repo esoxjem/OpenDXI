@@ -51,7 +51,19 @@ module Api
     end
 
     def skip_auth?
-      Rails.env.development? && ENV["SKIP_AUTH"] == "true"
+      return false unless Rails.env.development?
+
+      # Explicit skip via environment variable
+      return true if ENV["SKIP_AUTH"] == "true"
+
+      # Auto-skip when GitHub OAuth is not configured (development convenience)
+      # This allows local dev to work without setting up OAuth credentials
+      !github_oauth_configured?
+    end
+
+    def github_oauth_configured?
+      ENV["GITHUB_OAUTH_CLIENT_ID"].to_s.strip.present? &&
+        ENV["GITHUB_OAUTH_CLIENT_SECRET"].to_s.strip.present?
     end
 
     def current_user
