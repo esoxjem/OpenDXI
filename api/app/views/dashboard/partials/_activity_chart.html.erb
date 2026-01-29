@@ -2,63 +2,14 @@
 <div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
   <h3 class="font-semibold mb-4">Activity Timeline</h3>
   <% if @daily_activity.present? && @daily_activity.any? %>
-    <%= area_chart [
-      {
-        name: "Commits",
-        data: @daily_activity.map { |d| [d["date"], d["commits"] || 0] }
-      },
-      {
-        name: "PRs Merged",
-        data: @daily_activity.map { |d| [d["date"], d["prs_merged"] || 0] }
-      },
-      {
-        name: "Reviews",
-        data: @daily_activity.map { |d| [d["date"], d["reviews"] || 0] }
-      }
-    ],
-    colors: ["#06b6d4", "#10b981", "#a855f7"],
-    library: {
-      responsive: true,
-      maintainAspectRatio: false,
-      elements: {
-        line: {
-          tension: 0.4,
-          borderWidth: 2
-        },
-        point: {
-          radius: 0,
-          hitRadius: 10,
-          hoverRadius: 4
-        }
-      },
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: {
-            usePointStyle: true,
-            pointStyle: "circle",
-            boxWidth: 6
-          }
-        },
-        filler: {
-          propagate: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)"
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    },
-    height: "250px" %>
+    <%
+      activity_data = [
+        { name: "Commits", data: @daily_activity.map { |d| [d["date"], d["commits"] || 0] } },
+        { name: "PRs Merged", data: @daily_activity.map { |d| [d["date"], d["prs_merged"] || 0] } },
+        { name: "Reviews", data: @daily_activity.map { |d| [d["date"], d["reviews"] || 0] } }
+      ]
+    %>
+    <%= modern_area_chart activity_data %>
   <% else %>
     <div class="flex items-center justify-center h-[250px] text-muted-foreground">
       No activity data available

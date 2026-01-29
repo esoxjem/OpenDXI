@@ -1,46 +1,31 @@
-import { Controller } from "@hotwired/stimulus"
+import ApexChartController from "controllers/apex_chart_controller"
 
 // Developer Comparison Chart - Radar chart comparing developer vs team
-// Usage: <canvas data-controller="developer-comparison-chart"
-//               data-developer-comparison-chart-dev-scores-value='{"review_speed": 75, ...}'
-//               data-developer-comparison-chart-team-scores-value='{"review_speed": 65, ...}'></canvas>
-export default class extends Controller {
+// Usage: <div data-controller="developer-comparison-chart"
+//             data-developer-comparison-chart-dev-scores-value='{"review_speed": 75, ...}'
+//             data-developer-comparison-chart-team-scores-value='{"review_speed": 65, ...}'></div>
+export default class extends ApexChartController {
   static values = {
     devScores: Object,
-    teamScores: Object
+    teamScores: Object,
+    developerName: { type: String, default: "Developer" }
   }
 
   connect() {
-    this.retryTimeout = null
-    this.retryCount = 0
     this.initChart()
   }
 
-  disconnect() {
-    if (this.retryTimeout) {
-      clearTimeout(this.retryTimeout)
-      this.retryTimeout = null
-    }
-    if (this.chart) {
-      this.chart.destroy()
-      this.chart = null
-    }
-  }
-
   initChart() {
-    // Wait for Chart.js to be available
-    if (typeof Chart === "undefined") {
-      if (this.retryCount++ < 50) {
-        this.retryTimeout = setTimeout(() => this.initChart(), 100)
-      }
+    // Wait for ApexCharts to be available (loaded via script tag)
+    if (typeof ApexCharts === "undefined") {
+      setTimeout(() => this.initChart(), 100)
       return
     }
-    this.retryTimeout = null
 
     const devScores = this.devScoresValue || {}
     const teamScores = this.teamScoresValue || {}
 
-    // Normalize keys
+    // Normalize keys - handle both review_turnaround and review_speed
     const normalizeScores = (scores) => {
       const normalized = { ...scores }
       if (normalized.review_turnaround !== undefined && normalized.review_speed === undefined) {
@@ -52,7 +37,7 @@ export default class extends Controller {
     const normDevScores = normalizeScores(devScores)
     const normTeamScores = normalizeScores(teamScores)
 
-    // Dimension labels and keys
+    // Dimension keys and labels
     const dimensionKeys = ["review_speed", "cycle_time", "pr_size", "review_coverage", "commit_frequency"]
     const dimensionLabels = {
       review_speed: "Review Speed",
@@ -62,66 +47,42 @@ export default class extends Controller {
       commit_frequency: "Commit Frequency"
     }
 
-    const labels = dimensionKeys.map(key => dimensionLabels[key])
+    const categories = dimensionKeys.map(key => dimensionLabels[key])
     const devData = dimensionKeys.map(key => normDevScores[key] || 0)
     const teamData = dimensionKeys.map(key => normTeamScores[key] || 0)
 
-    this.chart = new Chart(this.element, {
-      type: "radar",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: "Team",
-            data: teamData,
-            backgroundColor: "rgba(156, 163, 175, 0.2)",
-            borderColor: "rgb(156, 163, 175)",
-            borderWidth: 2,
-            pointBackgroundColor: "rgb(156, 163, 175)",
-            pointBorderColor: "#fff",
-            pointRadius: 3
-          },
-          {
-            label: "Developer",
-            data: devData,
-            backgroundColor: "rgba(99, 102, 241, 0.2)",
-            borderColor: "rgb(99, 102, 241)",
-            borderWidth: 2,
-            pointBackgroundColor: "rgb(99, 102, 241)",
-            pointBorderColor: "#fff",
-            pointRadius: 3
-          }
-        ]
+    const options = {
+      ...this.baseOptions,
+      series: [
+        { name: this.developerNameValue, data: devData },
+        { name: "Team Average", data: teamData }
+      ],
+      chart: {
+        ...this.baseOptions.chart,
+        type: "radar",
+        height: "100%"
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 20,
-              backdropColor: "transparent",
-              font: { size: 9 }
-            },
-            grid: {
-              color: "rgba(0, 0, 0, 0.1)"
-            },
-            angleLines: {
-              color: "rgba(0, 0, 0, 0.1)"
-            },
-            pointLabels: {
-              font: { size: 10 }
-            }
+      colors: ["#6366f1", "#9ca3af"],
+      fill: { opacity: [0.1, 0.05] },
+      stroke: { width: 2 },
+      markers: { size: 4, strokeWidth: 2, strokeColors: "#fff" },
+      xaxis: {
+        categories: categories,
+        labels: { style: { colors: "#71717a", fontSize: "11px" } }
+      },
+      yaxis: { min: 0, max: 100, tickAmount: 4, labels: { show: false } },
+      legend: { position: "bottom", markers: { radius: 3 } },
+      plotOptions: {
+        radar: {
+          polygons: {
+            strokeColors: "rgba(0,0,0,0.06)",
+            connectorColors: "rgba(0,0,0,0.06)"
           }
         }
       }
-    })
+    }
+
+    this.chart = new ApexCharts(this.element, options)
+    this.chart.render()
   }
 }

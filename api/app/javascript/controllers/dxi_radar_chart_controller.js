@@ -1,49 +1,35 @@
-import { Controller } from "@hotwired/stimulus"
+import ApexChartController from "controllers/apex_chart_controller"
 
-// DXI Radar Chart controller using Chart.js
+// DXI Radar Chart controller using ApexCharts
 // Renders a radar chart showing the 5 DXI dimension scores
-// Usage: <canvas data-controller="dxi-radar-chart"
-//               data-dxi-radar-chart-scores-value='{"review_speed": 75, ...}'></canvas>
-export default class extends Controller {
+// Usage: <div data-controller="dxi-radar-chart"
+//             data-dxi-radar-chart-scores-value='{"review_speed": 75, ...}'></div>
+export default class extends ApexChartController {
   static values = {
-    scores: Object
+    scores: Object,
+    color: { type: String, default: "#6366f1" }
   }
 
   connect() {
-    this.retryTimeout = null
-    this.retryCount = 0
     this.initChart()
   }
 
-  disconnect() {
-    if (this.retryTimeout) {
-      clearTimeout(this.retryTimeout)
-      this.retryTimeout = null
-    }
-    if (this.chart) {
-      this.chart.destroy()
-      this.chart = null
-    }
-  }
-
   initChart() {
-    // Wait for Chart.js to be available
-    if (typeof Chart === "undefined") {
-      if (this.retryCount++ < 50) { // Max 5 seconds (50 retries * 100ms)
-        this.retryTimeout = setTimeout(() => this.initChart(), 100)
-      }
+    // Wait for ApexCharts to be available (loaded via script tag)
+    if (typeof ApexCharts === "undefined") {
+      setTimeout(() => this.initChart(), 100)
       return
     }
-    this.retryTimeout = null
 
     const scores = this.scoresValue || {}
 
     // Normalize keys - handle both review_turnaround (from API) and review_speed
-    if (scores.review_turnaround !== undefined && scores.review_speed === undefined) {
-      scores.review_speed = scores.review_turnaround
+    const normalizedScores = { ...scores }
+    if (normalizedScores.review_turnaround !== undefined && normalizedScores.review_speed === undefined) {
+      normalizedScores.review_speed = normalizedScores.review_turnaround
     }
 
-    // Map dimension keys to display labels (matching target screenshot order)
+    // Dimension keys and labels (matching target screenshot order)
     const dimensionKeys = ["review_speed", "cycle_time", "pr_size", "review_coverage", "commit_frequency"]
     const dimensionLabels = {
       review_speed: "Review Speed",
@@ -53,55 +39,37 @@ export default class extends Controller {
       commit_frequency: "Frequency"
     }
 
-    const labels = dimensionKeys.map(key => dimensionLabels[key])
-    const data = dimensionKeys.map(key => scores[key] || 0)
+    const categories = dimensionKeys.map(key => dimensionLabels[key])
+    const data = dimensionKeys.map(key => normalizedScores[key] || 0)
 
-    this.chart = new Chart(this.element, {
-      type: "radar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "Team DXI",
-          data: data,
-          backgroundColor: "rgba(99, 102, 241, 0.2)",
-          borderColor: "rgb(99, 102, 241)",
-          borderWidth: 2,
-          pointBackgroundColor: "rgb(99, 102, 241)",
-          pointBorderColor: "#fff",
-          pointHoverBackgroundColor: "#fff",
-          pointHoverBorderColor: "rgb(99, 102, 241)"
-        }]
+    const options = {
+      ...this.baseOptions,
+      series: [{ name: "DXI Score", data: data }],
+      chart: {
+        ...this.baseOptions.chart,
+        type: "radar",
+        height: "100%"
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 20,
-              backdropColor: "transparent"
-            },
-            grid: {
-              color: "rgba(0, 0, 0, 0.1)"
-            },
-            angleLines: {
-              color: "rgba(0, 0, 0, 0.1)"
-            },
-            pointLabels: {
-              font: {
-                size: 11
-              }
-            }
+      colors: [this.colorValue],
+      fill: { opacity: 0.1 },
+      stroke: { width: 2 },
+      markers: { size: 4, strokeWidth: 2, strokeColors: "#fff" },
+      xaxis: {
+        categories: categories,
+        labels: { style: { colors: "#71717a", fontSize: "11px" } }
+      },
+      yaxis: { min: 0, max: 100, tickAmount: 4, labels: { show: false } },
+      plotOptions: {
+        radar: {
+          polygons: {
+            strokeColors: "rgba(0,0,0,0.06)",
+            connectorColors: "rgba(0,0,0,0.06)"
           }
         }
       }
-    })
+    }
+
+    this.chart = new ApexCharts(this.element, options)
+    this.chart.render()
   }
 }

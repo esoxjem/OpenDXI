@@ -83,11 +83,11 @@
       <h3 class="font-semibold mb-4">Developer vs Team</h3>
       <% if dev_scores.present? && team_scores.present? %>
         <div class="h-[250px]">
-          <canvas
+          <div
             data-controller="developer-comparison-chart"
             data-developer-comparison-chart-dev-scores-value="<%= dev_scores.to_json %>"
             data-developer-comparison-chart-team-scores-value="<%= team_scores.to_json %>"
-          ></canvas>
+          ></div>
         </div>
         <div class="flex justify-center gap-4 mt-2 text-sm">
           <span class="flex items-center gap-1">

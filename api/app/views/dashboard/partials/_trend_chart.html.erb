@@ -53,55 +53,7 @@
   </div>
 
   <% if @sprint_history.present? && @sprint_history.any? %>
-    <%= line_chart trend_data,
-      colors: ["#6366f1"],
-      library: {
-        responsive: true,
-        maintainAspectRatio: false,
-        elements: {
-          line: {
-            tension: 0.3,
-            borderWidth: 2
-          },
-          point: {
-            radius: 4,
-            hoverRadius: 6,
-            backgroundColor: "#6366f1"
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          },
-          annotation: {
-            annotations: {
-              line1: {
-                type: "line",
-                yMin: 75,
-                yMax: 75,
-                borderColor: "rgba(156, 163, 175, 0.5)",
-                borderWidth: 2,
-                borderDash: [5, 5]
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            grid: {
-              color: "rgba(0, 0, 0, 0.05)"
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        }
-      },
-      height: "300px" %>
+    <%= modern_line_chart trend_data %>
 
     <%# Dimension filter tabs %>
     <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">

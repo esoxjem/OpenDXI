@@ -18,8 +18,8 @@ gem "turbo-rails"         # Hotwire Turbo
 gem "stimulus-rails"      # Hotwire Stimulus
 gem "tailwindcss-rails"   # Tailwind CSS
 
-# Charts
-gem "chartkick"           # Chart helpers (groupdate already present)
+# Charts - ApexCharts for modern, minimal chart aesthetics
+gem "apexcharts"          # ApexCharts view helpers
 # HTTP client for GitHub API
 gem "faraday", "~> 2.0"
 
