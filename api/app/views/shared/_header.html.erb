@@ -4,7 +4,18 @@
     <h1 class="text-2xl font-bold">
       <%= Rails.application.config.opendxi.github_org %> DXI Dashboard
     </h1>
-    <p class="text-muted-foreground">Developer Experience Index</p>
+    <p class="text-muted-foreground flex items-center gap-1">
+      Developer Experience Index
+      <span class="relative group cursor-help">
+        <svg class="size-4 text-muted-foreground/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <span class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 text-xs bg-popover text-popover-foreground border rounded-md shadow-md w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+          DXI measures developer productivity across 5 dimensions: Review Speed, Cycle Time, PR Size, Review Coverage, and Commit Frequency.
+        </span>
+      </span>
+    </p>
   </div>
 
   <div class="flex items-center gap-2">

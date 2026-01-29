@@ -1,8 +1,8 @@
-<%# Daily Activity Chart - stacked column chart %>
+<%# Activity Timeline - area chart showing commits, PRs merged, and reviews over time %>
 <div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
-  <h3 class="font-semibold mb-4">Daily Activity</h3>
+  <h3 class="font-semibold mb-4">Activity Timeline</h3>
   <% if @daily_activity.present? && @daily_activity.any? %>
-    <%= column_chart [
+    <%= area_chart [
       {
         name: "Commits",
         data: @daily_activity.map { |d| [d["date"], d["commits"] || 0] }
@@ -10,16 +10,51 @@
       {
         name: "PRs Merged",
         data: @daily_activity.map { |d| [d["date"], d["prs_merged"] || 0] }
+      },
+      {
+        name: "Reviews",
+        data: @daily_activity.map { |d| [d["date"], d["reviews"] || 0] }
       }
     ],
-    stacked: true,
-    colors: ["#3b82f6", "#10b981"],
+    colors: ["#06b6d4", "#10b981", "#a855f7"],
     library: {
       responsive: true,
       maintainAspectRatio: false,
+      elements: {
+        line: {
+          tension: 0.4,
+          borderWidth: 2
+        },
+        point: {
+          radius: 0,
+          hitRadius: 10,
+          hoverRadius: 4
+        }
+      },
       plugins: {
         legend: {
-          position: "bottom"
+          position: "bottom",
+          labels: {
+            usePointStyle: true,
+            pointStyle: "circle",
+            boxWidth: 6
+          }
+        },
+        filler: {
+          propagate: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)"
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
         }
       }
     },

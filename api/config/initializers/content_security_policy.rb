@@ -9,8 +9,10 @@ Rails.application.configure do
     policy.font_src    :self, :data
     policy.img_src     :self, :data, "https:"
     policy.object_src  :none
-    policy.script_src  :self
-    policy.style_src   :self
+    # Allow 'unsafe-inline' for Chartkick's inline chart initialization scripts
+    # and 'unsafe-eval' for Chart.js internals
+    policy.script_src  :self, :unsafe_inline, :unsafe_eval
+    policy.style_src   :self, :unsafe_inline
     policy.frame_ancestors :none
 
     # Allow WebSocket connections for Turbo in development

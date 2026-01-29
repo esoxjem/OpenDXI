@@ -62,25 +62,12 @@
                 cycle_time = dev["avg_cycle_time_hours"]
                 cycle_str = cycle_time ? "#{cycle_time.round(1)}h" : "--"
                 lines = (dev["lines_added"] || 0) + (dev["lines_deleted"] || 0)
+                dev_url = dashboard_path(tab: "developers", developer: dev["developer"], sprint: params[:sprint])
               %>
-              <%= link_to dashboard_path(tab: "developers", developer: dev["developer"], sprint: params[:sprint]),
-                  class: "table-row border-b hover:bg-muted/50 transition-colors cursor-pointer",
-                  data: { turbo_frame: "_top" } do %>
+              <tr class="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                  onclick="Turbo.visit('<%= dev_url %>')">
                 <td class="p-2 align-middle font-medium"><%= index + 1 %></td>
-                <td class="p-2 align-middle font-medium">
-                  <div class="flex items-center gap-2">
-                    <span class="relative flex size-6 shrink-0 overflow-hidden rounded-full">
-                      <% if dev["avatar_url"].present? %>
-                        <img src="<%= dev["avatar_url"] %>" class="aspect-square size-full" alt="" />
-                      <% else %>
-                        <span class="flex size-full items-center justify-center bg-muted text-xs">
-                          <%= dev["developer"][0..1].upcase %>
-                        </span>
-                      <% end %>
-                    </span>
-                    <span><%= dev["developer"] %></span>
-                  </div>
-                </td>
+                <td class="p-2 align-middle font-medium"><%= dev["developer"] %></td>
                 <td class="p-2 text-center align-middle">
                   <span class="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium <%= badge_variant_class(dev['dxi_score']) %>">
                     <%= dev["dxi_score"]&.round || 0 %>
@@ -91,7 +78,7 @@
                 <td class="p-2 text-center align-middle"><%= dev["reviews_given"] || 0 %></td>
                 <td class="p-2 text-center align-middle"><%= cycle_str %></td>
                 <td class="p-2 text-right align-middle"><%= number_with_delimiter(lines) %></td>
-              <% end %>
+              </tr>
             <% end %>
           </tbody>
         </table>
