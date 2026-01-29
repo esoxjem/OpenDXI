@@ -52,7 +52,8 @@ COPY . .
 # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
-# Note: Skipping assets:precompile - this is an API-only Rails app (no asset pipeline)
+# Precompile assets (Tailwind CSS and JavaScript)
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
 

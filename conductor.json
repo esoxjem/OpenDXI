@@ -1,7 +1,7 @@
 {
     "scripts": {
-        "setup": "cd api && bundle install && cd ../frontend && npm install && cd .. && ln -sf \"$CONDUCTOR_ROOT_PATH/api/.env\" ./api/.env && ln -sf \"$CONDUCTOR_ROOT_PATH/frontend/.env.local\" ./frontend/.env.local && ln -sf \"$CONDUCTOR_ROOT_PATH/.data\" ./.data && ln -sf \"$CONDUCTOR_ROOT_PATH/.claude\" ./.claude && ln -sf \"$CONDUCTOR_ROOT_PATH/screenshots\" ./screenshots && cd api && bin/rails db:prepare",
-        "run": "lsof -ti :3000 -ti :3001 2>/dev/null | xargs kill -9 2>/dev/null; bin/dev",
-        "archive": "lsof -ti :3000 -ti :3001 2>/dev/null | xargs kill -9 2>/dev/null"
+        "setup": "cd api && bundle install && ln -sf \"$CONDUCTOR_ROOT_PATH/api/.env\" ./.env && ln -sf \"$CONDUCTOR_ROOT_PATH/.data\" ./.data && ln -sf \"$CONDUCTOR_ROOT_PATH/.claude\" ./.claude && ln -sf \"$CONDUCTOR_ROOT_PATH/screenshots\" ./screenshots && bin/rails db:prepare",
+        "run": "lsof -ti :3000 2>/dev/null | xargs kill -9 2>/dev/null; cd api && bin/dev",
+        "archive": "lsof -ti :3000 2>/dev/null | xargs kill -9 2>/dev/null"
     }
 }

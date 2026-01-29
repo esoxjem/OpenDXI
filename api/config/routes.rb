@@ -4,9 +4,10 @@ Rails.application.routes.draw do
   # ═══════════════════════════════════════════════════════════════════════════
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Test-only route for setting up authenticated sessions in tests
+  # Test-only routes for setting up authenticated sessions in tests
   if Rails.env.test?
     post "test/auth", to: "test_auth#create"
+    get "test/auth/login", to: "test_auth#login"
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -18,7 +19,15 @@ Rails.application.routes.draw do
   delete "/auth/logout", to: "sessions#destroy"
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # API Routes (JSON API for Next.js frontend)
+  # Dashboard Routes (HTML views with Hotwire)
+  # ═══════════════════════════════════════════════════════════════════════════
+  root "dashboard#show"
+  get "dashboard", to: "dashboard#show"
+  post "dashboard/refresh", to: "dashboard#refresh"
+  get "login", to: "sessions#new"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # API Routes (JSON API - temporary, remove after Next.js migration complete)
   # ═══════════════════════════════════════════════════════════════════════════
   namespace :api do
     # Auth status endpoint
