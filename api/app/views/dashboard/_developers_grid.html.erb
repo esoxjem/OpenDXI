@@ -1,0 +1,12 @@
+<%# Developers Grid - shows all developers as cards %>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="developers-grid">
+  <% if @developers.present? %>
+    <% @developers.each_with_index do |dev, index| %>
+      <%= render "dashboard/partials/developer_card", developer: dev, index: index %>
+    <% end %>
+  <% else %>
+    <div class="col-span-full text-center py-12 text-muted-foreground">
+      No developers found for this sprint
+    </div>
+  <% end %>
+</div>

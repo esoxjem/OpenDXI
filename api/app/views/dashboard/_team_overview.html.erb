@@ -1,0 +1,16 @@
+<%# Team Overview Tab - KPI cards, charts, leaderboard %>
+<div class="space-y-6" data-testid="team-overview">
+  <%# KPI Cards %>
+  <%= render "dashboard/partials/kpi_cards" %>
+
+  <%# Charts Grid %>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2">
+      <%= render "dashboard/partials/activity_chart" %>
+    </div>
+    <%= render "dashboard/partials/radar_chart" %>
+  </div>
+
+  <%# Leaderboard %>
+  <%= render "dashboard/partials/leaderboard" %>
+</div>

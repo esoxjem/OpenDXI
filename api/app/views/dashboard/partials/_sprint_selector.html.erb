@@ -1,0 +1,42 @@
+<%# Sprint Selector Dropdown %>
+<%# locals: (sprints:, selected:) %>
+<%
+  current_sprint = sprints&.find { |s| s[:value] == selected } || sprints&.first
+  display_label = current_sprint&.dig(:label) || "Select Sprint"
+%>
+
+<div data-controller="dropdown" class="relative" data-action="click@window->dropdown#close">
+  <button
+    type="button"
+    data-action="click->dropdown#toggle"
+    class="inline-flex items-center justify-between gap-2 rounded-md text-sm font-medium
+           h-9 px-3 py-2 min-w-[180px]
+           border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground
+           transition-colors focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+  >
+    <span class="truncate"><%= display_label %></span>
+    <svg class="size-4 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+
+  <div
+    data-dropdown-target="menu"
+    class="hidden absolute right-0 mt-1 w-full min-w-[180px] rounded-md border bg-popover text-popover-foreground shadow-md z-50"
+  >
+    <div class="p-1">
+      <% (sprints || []).each do |sprint| %>
+        <%= link_to dashboard_path(sprint: sprint[:value], tab: params[:tab]),
+            class: "flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm cursor-pointer
+              #{sprint[:value] == selected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}" do %>
+          <% if sprint[:is_current] %>
+            <span class="size-2 rounded-full bg-green-500"></span>
+          <% else %>
+            <span class="size-2"></span>
+          <% end %>
+          <%= sprint[:label] %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,74 @@
+<%# Dashboard header with title, sprint selector, refresh button, and user menu %>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold">
+      <%= Rails.application.config.opendxi.github_org %> DXI Dashboard
+    </h1>
+    <p class="text-muted-foreground">Developer Experience Index</p>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <%# Sprint Selector %>
+    <%= render "dashboard/partials/sprint_selector", sprints: @sprints, selected: params[:sprint] %>
+
+    <%# Refresh Button %>
+    <%= button_to dashboard_refresh_path(sprint: params[:sprint]),
+        method: :post,
+        class: "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium
+                h-9 px-4 py-2 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground
+                transition-colors focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none" do %>
+      <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Refresh
+    <% end %>
+
+    <%# User Menu %>
+    <% if current_user %>
+      <%
+        # Support both symbol and string keys (session may serialize differently)
+        user_name = current_user[:name] || current_user["name"]
+        user_login = current_user[:login] || current_user["login"]
+        user_avatar = current_user[:avatar_url] || current_user["avatar_url"]
+        user_display = user_name || user_login || "?"
+      %>
+      <div data-controller="dropdown" class="relative" data-action="click@window->dropdown#close">
+        <button
+          data-action="click->dropdown#toggle"
+          class="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <span class="relative flex size-8 shrink-0 overflow-hidden rounded-full">
+            <% if user_avatar.present? %>
+              <img src="<%= user_avatar %>" class="aspect-square size-full" alt="<%= user_display %>" />
+            <% else %>
+              <span class="flex size-full items-center justify-center rounded-full bg-muted text-xs font-medium">
+                <%= user_display[0..1].upcase %>
+              </span>
+            <% end %>
+          </span>
+        </button>
+
+        <div
+          data-dropdown-target="menu"
+          class="hidden absolute right-0 mt-2 w-56 rounded-md border bg-popover text-popover-foreground shadow-md z-50"
+        >
+          <div class="p-2">
+            <div class="px-2 py-1.5">
+              <span class="font-medium text-sm"><%= user_display %></span>
+              <span class="block text-xs text-muted-foreground">@<%= user_login %></span>
+            </div>
+            <div class="h-px bg-border my-1"></div>
+            <%= link_to "/auth/logout",
+                data: { turbo_method: :delete },
+                class: "flex items-center gap-2 px-2 py-1.5 text-sm text-destructive rounded-sm hover:bg-accent cursor-pointer" do %>
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign out
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

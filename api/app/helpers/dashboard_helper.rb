@@ -120,6 +120,18 @@ module DashboardHelper
     end
   end
 
+  # Badge variant class for DXI score badges
+  def badge_variant_class(score)
+    score = score.to_i
+    if score >= 70
+      "bg-primary text-primary-foreground"
+    elsif score >= 50
+      "bg-secondary text-secondary-foreground"
+    else
+      "bg-destructive text-white"
+    end
+  end
+
   # Human-readable dimension name
   def dimension_label(key)
     {

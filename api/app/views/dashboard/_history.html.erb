@@ -1,0 +1,31 @@
+<%# History Tab - DXI trend chart and summary stats %>
+<div class="space-y-6" data-testid="history">
+  <%# Trend Chart %>
+  <%= render "dashboard/partials/trend_chart" %>
+
+  <%# Summary Stats %>
+  <% if @sprint_history.present? %>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-card text-card-foreground rounded-xl border p-4">
+        <div class="text-sm font-medium text-muted-foreground">Sprints Analyzed</div>
+        <div class="text-2xl font-bold"><%= @sprint_history.size %></div>
+      </div>
+      <div class="bg-card text-card-foreground rounded-xl border p-4">
+        <div class="text-sm font-medium text-muted-foreground">Avg Developer Count</div>
+        <div class="text-2xl font-bold">
+          <%= (@sprint_history.sum { |s| s.summary["developer_count"] || 0 } / @sprint_history.size.to_f).round %>
+        </div>
+      </div>
+      <div class="bg-card text-card-foreground rounded-xl border p-4">
+        <div class="text-sm font-medium text-muted-foreground">Total PRs (All Sprints)</div>
+        <div class="text-2xl font-bold">
+          <%= @sprint_history.sum { |s| s.summary["total_prs"] || 0 } %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="text-center py-12 text-muted-foreground">
+      No historical data available yet
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,101 @@
+<%# Developer Leaderboard with server-side sorting %>
+<%
+  sort_key = params[:sort] || "dxi_score"
+  sort_keys = %w[dxi_score commits prs_opened reviews_given]
+  sort_key = "dxi_score" unless sort_keys.include?(sort_key)
+
+  # Sort developers server-side
+  sorted = (@developers || []).sort_by do |dev|
+    case sort_key
+    when "commits" then dev["commits"] || dev["total_commits"] || 0
+    when "prs_opened" then dev["prs_opened"] || 0
+    when "reviews_given" then dev["reviews_given"] || 0
+    else dev["dxi_score"] || 0
+    end
+  end.reverse
+%>
+
+<div class="bg-card text-card-foreground rounded-xl border shadow-sm">
+  <%# Header with sort buttons %>
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 pb-4">
+    <h3 class="text-lg font-semibold">Developer Leaderboard</h3>
+    <div class="flex gap-1">
+      <% [
+        ["dxi_score", "DXI"],
+        ["commits", "Commits"],
+        ["prs_opened", "PRs"],
+        ["reviews_given", "Reviews"]
+      ].each do |key, label| %>
+        <%= link_to label,
+            dashboard_path(tab: "team", sprint: params[:sprint], sort: key),
+            class: "inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3
+              #{sort_key == key ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-accent hover:text-accent-foreground'}
+              transition-colors" %>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Table %>
+  <div class="px-6 pb-6">
+    <% if sorted.empty? %>
+      <div class="flex items-center justify-center h-[200px] text-muted-foreground">
+        No data available
+      </div>
+    <% else %>
+      <div class="relative w-full overflow-x-auto">
+        <table class="w-full caption-bottom text-sm">
+          <thead class="[&_tr]:border-b">
+            <tr class="border-b">
+              <th class="h-10 px-2 text-left align-middle font-medium w-12">Rank</th>
+              <th class="h-10 px-2 text-left align-middle font-medium">Developer</th>
+              <th class="h-10 px-2 text-center align-middle font-medium">DXI Score</th>
+              <th class="h-10 px-2 text-center align-middle font-medium">Commits</th>
+              <th class="h-10 px-2 text-center align-middle font-medium">PRs</th>
+              <th class="h-10 px-2 text-center align-middle font-medium">Reviews</th>
+              <th class="h-10 px-2 text-center align-middle font-medium">Cycle Time</th>
+              <th class="h-10 px-2 text-right align-middle font-medium">Lines Changed</th>
+            </tr>
+          </thead>
+          <tbody class="[&_tr:last-child]:border-0">
+            <% sorted.each_with_index do |dev, index| %>
+              <%
+                cycle_time = dev["avg_cycle_time_hours"]
+                cycle_str = cycle_time ? "#{cycle_time.round(1)}h" : "--"
+                lines = (dev["lines_added"] || 0) + (dev["lines_deleted"] || 0)
+              %>
+              <%= link_to dashboard_path(tab: "developers", developer: dev["developer"], sprint: params[:sprint]),
+                  class: "table-row border-b hover:bg-muted/50 transition-colors cursor-pointer",
+                  data: { turbo_frame: "_top" } do %>
+                <td class="p-2 align-middle font-medium"><%= index + 1 %></td>
+                <td class="p-2 align-middle font-medium">
+                  <div class="flex items-center gap-2">
+                    <span class="relative flex size-6 shrink-0 overflow-hidden rounded-full">
+                      <% if dev["avatar_url"].present? %>
+                        <img src="<%= dev["avatar_url"] %>" class="aspect-square size-full" alt="" />
+                      <% else %>
+                        <span class="flex size-full items-center justify-center bg-muted text-xs">
+                          <%= dev["developer"][0..1].upcase %>
+                        </span>
+                      <% end %>
+                    </span>
+                    <span><%= dev["developer"] %></span>
+                  </div>
+                </td>
+                <td class="p-2 text-center align-middle">
+                  <span class="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium <%= badge_variant_class(dev['dxi_score']) %>">
+                    <%= dev["dxi_score"]&.round || 0 %>
+                  </span>
+                </td>
+                <td class="p-2 text-center align-middle"><%= dev["commits"] || dev["total_commits"] || 0 %></td>
+                <td class="p-2 text-center align-middle"><%= dev["prs_merged"] || 0 %>/<%= dev["prs_opened"] || 0 %></td>
+                <td class="p-2 text-center align-middle"><%= dev["reviews_given"] || 0 %></td>
+                <td class="p-2 text-center align-middle"><%= cycle_str %></td>
+                <td class="p-2 text-right align-middle"><%= number_with_delimiter(lines) %></td>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
+</div>

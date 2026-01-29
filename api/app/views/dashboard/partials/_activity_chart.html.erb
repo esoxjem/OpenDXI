@@ -1,0 +1,32 @@
+<%# Daily Activity Chart - stacked column chart %>
+<div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
+  <h3 class="font-semibold mb-4">Daily Activity</h3>
+  <% if @daily_activity.present? && @daily_activity.any? %>
+    <%= column_chart [
+      {
+        name: "Commits",
+        data: @daily_activity.map { |d| [d["date"], d["commits"] || 0] }
+      },
+      {
+        name: "PRs Merged",
+        data: @daily_activity.map { |d| [d["date"], d["prs_merged"] || 0] }
+      }
+    ],
+    stacked: true,
+    colors: ["#3b82f6", "#10b981"],
+    library: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      }
+    },
+    height: "250px" %>
+  <% else %>
+    <div class="flex items-center justify-center h-[250px] text-muted-foreground">
+      No activity data available
+    </div>
+  <% end %>
+</div>

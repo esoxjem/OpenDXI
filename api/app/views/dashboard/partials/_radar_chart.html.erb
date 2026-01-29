@@ -1,0 +1,17 @@
+<%# DXI Dimensions Radar Chart %>
+<%# Uses custom Stimulus controller since Chartkick doesn't support radar charts %>
+<div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
+  <h3 class="font-semibold mb-4">DXI Dimensions</h3>
+  <% if @team_dimension_scores.present? %>
+    <div class="h-[250px]">
+      <canvas
+        data-controller="dxi-radar-chart"
+        data-dxi-radar-chart-scores-value="<%= @team_dimension_scores.to_json %>"
+      ></canvas>
+    </div>
+  <% else %>
+    <div class="flex items-center justify-center h-[250px] text-muted-foreground">
+      No dimension data available
+    </div>
+  <% end %>
+</div>

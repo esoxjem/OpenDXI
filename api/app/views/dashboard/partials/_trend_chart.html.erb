@@ -1,0 +1,30 @@
+<%# DXI Trend Chart - historical scores %>
+<div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
+  <h3 class="font-semibold mb-4">DXI Trend</h3>
+  <% if @sprint_history.present? && @sprint_history.any? %>
+    <%= line_chart @sprint_history.map { |s|
+      [s.start_date.strftime("%b %d"), s.summary["avg_dxi_score"]&.round || 0]
+    },
+    colors: ["#6366f1"],
+    library: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    },
+    height: "300px" %>
+  <% else %>
+    <div class="flex items-center justify-center h-[300px] text-muted-foreground">
+      No historical data available
+    </div>
+  <% end %>
+</div>
