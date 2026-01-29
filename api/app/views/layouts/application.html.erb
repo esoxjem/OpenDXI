@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-param" content="<%= request_forgery_protection_token %>">
+    <meta name="csrf-token" content="<%= form_authenticity_token %>">
+
+    <title><%= content_for(:title) || "OpenDXI Dashboard" %></title>
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full bg-background text-foreground antialiased">
+    <%= render "shared/flash" %>
+    <%= yield %>
+  </body>
+</html>

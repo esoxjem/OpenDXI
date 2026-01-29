@@ -1,0 +1,52 @@
+<%# Developer Card - clickable card for developers grid %>
+<%# locals: (developer:, index: 0) %>
+<%
+  initials = developer["developer"].to_s.split(/[\s\-_]+/).map { |p| p[0]&.upcase }.compact.first(2).join
+  lines_changed = (developer["lines_added"] || 0) + (developer["lines_deleted"] || 0)
+  dxi_score = developer["dxi_score"]&.round || 0
+%>
+
+<%= link_to dashboard_path(tab: "developers", developer: developer["developer"], sprint: params[:sprint]),
+    class: "block bg-card text-card-foreground rounded-xl border shadow-sm hover:border-primary/50 transition-all hover:-translate-y-0.5 developer-card" do %>
+  <div class="p-4">
+    <%# Header with avatar and name %>
+    <div class="flex items-center gap-3 mb-3">
+      <span class="relative flex size-10 shrink-0 overflow-hidden rounded-full">
+        <% if developer["avatar_url"].present? %>
+          <img src="<%= developer["avatar_url"] %>" class="aspect-square size-full" alt="" />
+        <% else %>
+          <span class="flex size-full items-center justify-center bg-primary/10 text-sm font-semibold text-primary">
+            <%= initials %>
+          </span>
+        <% end %>
+      </span>
+      <div class="flex-1 min-w-0">
+        <p class="font-medium truncate"><%= developer["developer"] %></p>
+        <span class="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium mt-1 <%= badge_variant_class(dxi_score) %>">
+          DXI <%= dxi_score %>
+        </span>
+      </div>
+    </div>
+
+    <%# Stats grid %>
+    <div class="grid grid-cols-3 gap-2 text-sm">
+      <div>
+        <p class="text-muted-foreground">Commits</p>
+        <p class="font-medium"><%= developer["commits"] || developer["total_commits"] || 0 %></p>
+      </div>
+      <div>
+        <p class="text-muted-foreground">PRs</p>
+        <p class="font-medium"><%= developer["prs_merged"] || 0 %>/<%= developer["prs_opened"] || 0 %></p>
+      </div>
+      <div>
+        <p class="text-muted-foreground">Reviews</p>
+        <p class="font-medium"><%= developer["reviews_given"] || 0 %></p>
+      </div>
+    </div>
+
+    <%# Footer %>
+    <div class="mt-2 pt-2 border-t text-xs text-muted-foreground">
+      <%= number_with_delimiter(lines_changed) %> lines changed
+    </div>
+  </div>
+<% end %>

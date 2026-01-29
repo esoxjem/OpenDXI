@@ -1,0 +1,72 @@
+<%# Developer Detail View %>
+<%# locals: (developer:) %>
+<div class="space-y-6" data-testid="developer-detail">
+  <%# Back Button %>
+  <%= link_to dashboard_path(tab: "developers", sprint: params[:sprint]),
+      class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4" do %>
+    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+    Back to Developers
+  <% end %>
+
+  <%# Developer Header %>
+  <div class="flex items-center gap-4">
+    <span class="relative flex size-16 shrink-0 overflow-hidden rounded-full">
+      <% if developer["avatar_url"].present? %>
+        <img src="<%= developer["avatar_url"] %>" class="aspect-square size-full" alt="<%= developer["developer"] %>" />
+      <% else %>
+        <span class="flex size-full items-center justify-center rounded-full bg-muted text-lg font-medium">
+          <%= developer["developer"][0..1].upcase %>
+        </span>
+      <% end %>
+    </span>
+    <div>
+      <h2 class="text-2xl font-bold"><%= developer["developer"] %></h2>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-sm font-medium
+          <%= badge_variant_class(developer["dxi_score"]) %>">
+          DXI: <%= developer["dxi_score"]&.round || 0 %>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <%# Stats Grid %>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">Commits</div>
+      <div class="text-2xl font-bold"><%= developer["total_commits"] || developer["commits"] || 0 %></div>
+    </div>
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">PRs Opened</div>
+      <div class="text-2xl font-bold"><%= developer["prs_opened"] || 0 %></div>
+    </div>
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">PRs Merged</div>
+      <div class="text-2xl font-bold"><%= developer["prs_merged"] || 0 %></div>
+    </div>
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">Reviews Given</div>
+      <div class="text-2xl font-bold"><%= developer["reviews_given"] || 0 %></div>
+    </div>
+  </div>
+
+  <%# Dimension Scores %>
+  <% if developer["dimension_scores"].present? %>
+    <div class="bg-card text-card-foreground rounded-xl border p-6">
+      <h3 class="font-semibold mb-4">DXI Dimension Scores</h3>
+      <div class="space-y-3">
+        <% developer["dimension_scores"].each do |dimension, score| %>
+          <div class="flex items-center gap-4">
+            <div class="w-32 text-sm text-muted-foreground capitalize"><%= dimension.to_s.titleize %></div>
+            <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-primary rounded-full transition-all" style="width: <%= score.to_i %>%"></div>
+            </div>
+            <div class="w-12 text-sm text-right"><%= score&.round || 0 %></div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

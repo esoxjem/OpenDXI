@@ -1,0 +1,62 @@
+<%# Single KPI Card - matches shadcn Card styling %>
+<%# locals: (title:, value:, current_value: nil, previous_value: nil, invert_trend: false) %>
+<%
+  # Calculate trend direction
+  trend = nil
+  trend_delta = nil
+
+  if current_value.present? && previous_value.present? && previous_value != 0
+    trend_delta = current_value.to_f - previous_value.to_f
+
+    if trend_delta.abs < 0.1
+      trend = :neutral
+    elsif trend_delta > 0
+      trend = :up
+    else
+      trend = :down
+    end
+  end
+
+  # Determine if trend is positive (green) or negative (red)
+  is_positive = case trend
+    when :neutral then nil
+    when :up then !invert_trend
+    when :down then invert_trend
+  end
+
+  trend_class = case is_positive
+    when nil then "text-muted-foreground"
+    when true then "text-green-600 dark:text-green-500"
+    else "text-red-600 dark:text-red-500"
+  end
+%>
+
+<div class="bg-card text-card-foreground rounded-xl border shadow-sm h-full">
+  <div class="p-4">
+    <p class="text-sm text-muted-foreground mb-1"><%= title %></p>
+    <div class="flex items-baseline gap-2">
+      <h3 class="text-2xl font-bold"><%= value %></h3>
+      <% if trend.present? && trend_delta.present? %>
+        <div class="flex items-center gap-0.5 text-xs <%= trend_class %>">
+          <% case trend %>
+          <% when :up %>
+            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          <% when :down %>
+            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+            </svg>
+          <% else %>
+            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+            </svg>
+          <% end %>
+          <span>
+            <%= trend_delta > 0 ? "+" : "" %><%= trend_delta.abs < 10 ? number_with_precision(trend_delta, precision: 1) : trend_delta.round %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
