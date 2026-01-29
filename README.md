@@ -7,93 +7,79 @@ An open-source Developer Experience Index dashboard for measuring and improving 
 ```bash
 # Install dependencies
 cd api && bundle install
-cd ../frontend && npm install
 
-# Run both servers (frontend :3001, backend :3000)
+# Run the server (with Tailwind CSS watcher)
 bin/dev
 ```
 
-Dashboard available at http://localhost:3001
+Dashboard available at http://localhost:3000
 
 ## Prerequisites
 
-- Ruby 3.3+
-- Node.js 18+
+- Ruby 3.4+
 - GitHub Personal Access Token with `repo` and `read:org` scopes
+- GitHub OAuth App credentials (for authentication)
 
-## Running Individually
-
-### Backend (Rails 8)
+## Development
 
 ```bash
 cd api
 bundle install
-bin/rails server           # Development server on localhost:3000
-bin/rails test             # Run tests
-bin/rails console          # Rails console
-```
-
-### Frontend (Next.js)
-
-```bash
-cd frontend
-npm install
-npm run dev        # Development server on localhost:3001
-npm run build      # Production build
-npm run lint       # ESLint
+bin/dev                # Development server with CSS watching
+bin/rails server       # Development server only
+bin/rails test         # Run tests
+bin/rails console      # Rails console
 ```
 
 ## Environment Configuration
 
-### Backend
-
-Copy the example environment file and configure your GitHub organization:
+Copy the example environment file and configure:
 
 ```bash
 cp api/.env.example api/.env
 ```
 
-Edit `api/.env` and configure:
+### Required Variables
 
-```
-GITHUB_ORG=your-github-org
-GH_TOKEN=your-github-token
-```
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_ORG` | GitHub organization name |
+| `GH_TOKEN` | GitHub Personal Access Token with `repo` and `read:org` scopes. [Create one](https://github.com/settings/tokens) |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App client secret |
+
+### Optional Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GITHUB_ORG` | GitHub organization name (required) | - |
-| `GH_TOKEN` | GitHub Personal Access Token (required). [Create one](https://github.com/settings/tokens) with `repo` and `read:org` scopes | - |
 | `SPRINT_START_DATE` | First sprint start date (YYYY-MM-DD) | `2026-01-07` |
 | `SPRINT_DURATION_DAYS` | Sprint length in days | `14` |
 | `MAX_PAGES_PER_QUERY` | GraphQL pagination limit | `10` |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:3000` |
-
-### Frontend
-
-```bash
-cp frontend/.env.example frontend/.env.local
-```
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:3000` |
+| `ALLOWED_USERS` | Comma-separated GitHub usernames allowed to access (empty = all) | - |
 
 ## Architecture
 
 ```
-GitHub GraphQL API (via GH_TOKEN)
-    ↓
-GithubService → fetch via Faraday HTTP
-    ↓
-DxiCalculator → calculate DXI scores
-    ↓
-Sprint model → SQLite via ActiveRecord
-    ↓
-Serializers → JSON response
-    ↓
-TanStack Query hooks → React components
+GitHub OAuth → SessionsController → Session
+                                        ↓
+GitHub GraphQL API (via GH_TOKEN)       ↓
+    ↓                                   ↓
+GithubService → fetch via Faraday  →   ↓
+    ↓                                   ↓
+DxiCalculator → calculate DXI scores    ↓
+    ↓                                   ↓
+Sprint model → SQLite via ActiveRecord  ↓
+    ↓                                   ↓
+DashboardController → Turbo Frames → Views (ERB + Tailwind)
 ```
+
+### Tech Stack
+
+- **Backend**: Rails 8.1 with Hotwire (Turbo + Stimulus)
+- **Frontend**: Server-rendered ERB templates with Tailwind CSS
+- **Charts**: Chartkick with ApexCharts
+- **Database**: SQLite (development), configurable for production
+- **Authentication**: GitHub OAuth via OmniAuth
 
 ## DXI Score Algorithm
 
@@ -111,6 +97,8 @@ Five weighted dimensions normalized to 0-100:
 
 ## API Endpoints
 
+The dashboard also exposes a JSON API:
+
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/health` | Health check with version |
@@ -119,6 +107,26 @@ Five weighted dimensions normalized to 0-100:
 | `GET /api/sprints/{start}/{end}/metrics?force_refresh=true` | Sprint metrics |
 | `GET /api/sprints/history?count=6` | Sprint history for trends |
 | `GET /api/developers/{name}/history?count=6` | Developer history |
+
+## Deployment
+
+### Docker
+
+```bash
+cd api
+docker build -t opendxi .
+docker run -d -p 80:80 \
+  -e RAILS_MASTER_KEY=<value from config/master.key> \
+  -e GITHUB_ORG=your-org \
+  -e GH_TOKEN=your-token \
+  -e GITHUB_CLIENT_ID=your-client-id \
+  -e GITHUB_CLIENT_SECRET=your-secret \
+  --name opendxi opendxi
+```
+
+### Kamal
+
+The app is configured for deployment with Kamal. See `config/deploy.yml`.
 
 ## License
 

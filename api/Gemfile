@@ -8,8 +8,18 @@ gem "sqlite3", ">= 2.1"
 gem "puma", ">= 5.0"
 # Database-backed Active Job backend (runs in Puma via plugin for single-container deploy)
 gem "solid_queue"
-# CORS support for API endpoints (Next.js frontend)
+# CORS support for API endpoints (temporary - remove after Next.js migration)
 gem "rack-cors"
+
+# Frontend - Hotwire stack
+gem "propshaft"           # Modern asset pipeline
+gem "importmap-rails"     # JS without bundler
+gem "turbo-rails"         # Hotwire Turbo
+gem "stimulus-rails"      # Hotwire Stimulus
+gem "tailwindcss-rails"   # Tailwind CSS
+
+# Charts
+gem "chartkick"           # Chart helpers (groupdate already present)
 # HTTP client for GitHub API
 gem "faraday", "~> 2.0"
 
@@ -60,4 +70,7 @@ end
 group :test do
   # HTTP request stubbing for testing external APIs
   gem "webmock", "~> 3.0"
+  # System testing
+  gem "capybara"
+  gem "selenium-webdriver"
 end

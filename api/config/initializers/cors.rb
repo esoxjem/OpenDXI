@@ -1,27 +1,23 @@
 # frozen_string_literal: true
 
-# CORS configuration for API and OAuth endpoints
+# CORS configuration for API endpoints
 #
-# Allows the Next.js frontend to make cross-origin requests to the Rails API.
-# In development, allows localhost:3001. In production, configure via CORS_ORIGINS env var.
+# Since the frontend is now server-rendered by Rails, CORS is only needed for:
+# - External API consumers (if any)
+# - Local development with external tools
 #
-# IMPORTANT: credentials: true is required for session cookies to work cross-origin
+# Configure origins via CORS_ORIGINS env var if needed.
 
-Rails.application.config.middleware.insert_before 0, Rack::Cors do
-  allow do
-    origins(*ENV.fetch("CORS_ORIGINS", "http://localhost:3001").split(",").map(&:strip))
+if ENV["CORS_ORIGINS"].present?
+  Rails.application.config.middleware.insert_before 0, Rack::Cors do
+    allow do
+      origins(*ENV["CORS_ORIGINS"].split(",").map(&:strip))
 
-    # OAuth routes
-    resource "/auth/*",
-      headers: :any,
-      methods: %i[get delete options],
-      credentials: true
-
-    # API routes
-    resource "/api/*",
-      headers: :any,
-      methods: %i[get post put patch delete options head],
-      credentials: true,
-      max_age: 86400
+      resource "/api/*",
+        headers: :any,
+        methods: %i[get post put patch delete options head],
+        credentials: true,
+        max_age: 86400
+    end
   end
 end
