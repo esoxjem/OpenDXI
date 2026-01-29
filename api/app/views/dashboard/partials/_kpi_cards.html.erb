@@ -1,26 +1,37 @@
-<%# KPI Cards Row - 4 key metrics %>
+<%# KPI Cards Row - 4 key metrics with sparklines %>
+<%
+  # Extract sparkline data from daily activity
+  commits_sparkline = @daily_activity&.map { |d| d["commits"] || 0 } || []
+  prs_sparkline = @daily_activity&.map { |d| d["prs_merged"] || 0 } || []
+%>
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="kpi-cards">
   <%= render "dashboard/partials/kpi_card",
       title: "DXI Score",
       value: @summary["avg_dxi_score"]&.round.to_s || "0",
       current_value: @summary["avg_dxi_score"],
-      previous_value: @prev_summary&.dig("avg_dxi_score") %>
+      previous_value: @prev_summary&.dig("avg_dxi_score"),
+      sparkline_data: commits_sparkline %>
 
   <%= render "dashboard/partials/kpi_card",
       title: "Commits",
       value: @summary["total_commits"]&.to_s || "0",
       current_value: @summary["total_commits"],
-      previous_value: @prev_summary&.dig("total_commits") %>
+      previous_value: @prev_summary&.dig("total_commits"),
+      sparkline_data: commits_sparkline %>
 
   <%= render "dashboard/partials/kpi_card",
       title: "PR Cycle Time",
       value: @avg_cycle_time ? "#{@avg_cycle_time}h" : "--",
       current_value: @team_dimension_scores&.dig("cycle_time"),
-      previous_value: @prev_dimension_scores&.dig("cycle_time") %>
+      previous_value: @prev_dimension_scores&.dig("cycle_time"),
+      invert_trend: true,
+      sparkline_data: prs_sparkline %>
 
   <%= render "dashboard/partials/kpi_card",
       title: "Review Time",
       value: @avg_review_time ? "#{@avg_review_time}h" : "--",
-      current_value: @team_dimension_scores&.dig("review_speed"),
-      previous_value: @prev_dimension_scores&.dig("review_speed") %>
+      current_value: @team_dimension_scores&.dig("review_turnaround") || @team_dimension_scores&.dig("review_speed"),
+      previous_value: @prev_dimension_scores&.dig("review_turnaround") || @prev_dimension_scores&.dig("review_speed"),
+      invert_trend: true,
+      sparkline_data: prs_sparkline %>
 </div>

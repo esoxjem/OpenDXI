@@ -38,17 +38,23 @@ export default class extends Controller {
 
     const scores = this.scoresValue || {}
 
-    // Map dimension keys to display labels
+    // Normalize keys - handle both review_turnaround (from API) and review_speed
+    if (scores.review_turnaround !== undefined && scores.review_speed === undefined) {
+      scores.review_speed = scores.review_turnaround
+    }
+
+    // Map dimension keys to display labels (matching target screenshot order)
+    const dimensionKeys = ["review_speed", "cycle_time", "pr_size", "review_coverage", "commit_frequency"]
     const dimensionLabels = {
       review_speed: "Review Speed",
       cycle_time: "Cycle Time",
       pr_size: "PR Size",
       review_coverage: "Review Coverage",
-      commit_frequency: "Commit Freq"
+      commit_frequency: "Frequency"
     }
 
-    const labels = Object.keys(dimensionLabels).map(key => dimensionLabels[key])
-    const data = Object.keys(dimensionLabels).map(key => scores[key] || 0)
+    const labels = dimensionKeys.map(key => dimensionLabels[key])
+    const data = dimensionKeys.map(key => scores[key] || 0)
 
     this.chart = new Chart(this.element, {
       type: "radar",

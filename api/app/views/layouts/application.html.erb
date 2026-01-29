@@ -9,6 +9,9 @@
     <title><%= content_for(:title) || "OpenDXI Dashboard" %></title>
 
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%# Load Chart.js and Chartkick via script tags (before importmap) %>
+    <%= javascript_include_tag "Chart.bundle", "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "chartkick", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 

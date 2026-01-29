@@ -1,5 +1,5 @@
-<%# Single KPI Card - matches shadcn Card styling %>
-<%# locals: (title:, value:, current_value: nil, previous_value: nil, invert_trend: false) %>
+<%# Single KPI Card - matches shadcn Card styling with sparkline %>
+<%# locals: (title:, value:, current_value: nil, previous_value: nil, invert_trend: false, sparkline_data: nil) %>
 <%
   # Calculate trend direction
   trend = nil
@@ -17,46 +17,83 @@
     end
   end
 
-  # Determine if trend is positive (green) or negative (red)
+  # Determine if trend is positive (green) or negative (magenta for specific metrics)
   is_positive = case trend
     when :neutral then nil
     when :up then !invert_trend
     when :down then invert_trend
   end
 
+  # Color classes - green for positive, magenta/pink for negative or special metrics
+  trend_color = case is_positive
+    when nil then "#9ca3af"  # gray
+    when true then "#22c55e"  # green
+    else "#ec4899"  # magenta/pink
+  end
+
   trend_class = case is_positive
     when nil then "text-muted-foreground"
-    when true then "text-green-600 dark:text-green-500"
-    else "text-red-600 dark:text-red-500"
+    when true then "text-green-500"
+    else "text-pink-500"
   end
+
+  # Generate sparkline SVG path and area path if data provided
+  sparkline_path = nil
+  sparkline_area = nil
+  if local_assigns[:sparkline_data].present? && sparkline_data.is_a?(Array) && sparkline_data.any?
+    values = sparkline_data.map { |v| v.to_f }
+    max_val = values.max > 0 ? values.max : 1
+    min_val = values.min
+    range = max_val - min_val
+    range = 1 if range == 0
+
+    width = 100
+    height = 30
+    points = values.each_with_index.map do |v, i|
+      x = (i.to_f / (values.length - 1)) * width
+      y = height - ((v - min_val) / range * height * 0.8) - (height * 0.1)
+      "#{x.round(1)},#{y.round(1)}"
+    end
+    sparkline_path = points.join(" ")
+    # Create area path (close the path at the bottom)
+    sparkline_area = "0,#{height} " + sparkline_path + " #{width},#{height}"
+  end
+
+  # Sparkline color based on trend
+  sparkline_color = is_positive == false ? "#ec4899" : "#a855f7"
 %>
 
 <div class="bg-card text-card-foreground rounded-xl border shadow-sm h-full">
-  <div class="p-4">
+  <div class="p-4 pb-2">
     <p class="text-sm text-muted-foreground mb-1"><%= title %></p>
     <div class="flex items-baseline gap-2">
       <h3 class="text-2xl font-bold"><%= value %></h3>
       <% if trend.present? && trend_delta.present? %>
-        <div class="flex items-center gap-0.5 text-xs <%= trend_class %>">
-          <% case trend %>
-          <% when :up %>
-            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          <% when :down %>
-            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-            </svg>
-          <% else %>
-            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-            </svg>
-          <% end %>
-          <span>
-            <%= trend_delta > 0 ? "+" : "" %><%= trend_delta.abs < 10 ? number_with_precision(trend_delta, precision: 1) : trend_delta.round %>
-          </span>
-        </div>
+        <span class="text-sm font-medium <%= trend_class %>">
+          <% if trend == :up %>↗<% elsif trend == :down %>↘<% end %><%= trend_delta > 0 ? "+" : "" %><%= trend_delta.abs < 10 ? number_with_precision(trend_delta, precision: 1) : trend_delta.round %>
+        </span>
       <% end %>
     </div>
   </div>
+  <% if sparkline_path.present? %>
+    <div class="px-4 pb-3">
+      <svg class="w-full h-8" viewBox="0 0 100 30" preserveAspectRatio="none">
+        <%# Area fill %>
+        <polygon
+          points="<%= sparkline_area %>"
+          fill="<%= sparkline_color %>"
+          fill-opacity="0.2"
+        />
+        <%# Line %>
+        <polyline
+          points="<%= sparkline_path %>"
+          fill="none"
+          stroke="<%= sparkline_color %>"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+  <% end %>
 </div>

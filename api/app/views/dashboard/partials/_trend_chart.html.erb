@@ -1,27 +1,130 @@
-<%# DXI Trend Chart - historical scores %>
+<%# DXI Trend Chart - historical scores with dimension filters %>
+<%
+  # Get current dimension filter from params, default to dxi_score
+  dimension = params[:dimension] || "dxi_score"
+  valid_dimensions = %w[dxi_score review_speed cycle_time pr_size review_coverage commit_frequency]
+  dimension = "dxi_score" unless valid_dimensions.include?(dimension)
+
+  # Dimension labels for display
+  dimension_labels = {
+    "dxi_score" => "DXI Score",
+    "review_speed" => "Review Speed",
+    "cycle_time" => "Cycle Time",
+    "pr_size" => "PR Size",
+    "review_coverage" => "Review Coverage",
+    "commit_frequency" => "Commit Frequency"
+  }
+
+  # Calculate trend data and overall trend
+  if @sprint_history.present? && @sprint_history.any?
+    # Get the score based on dimension
+    trend_data = @sprint_history.map do |s|
+      score = case dimension
+        when "dxi_score" then s.summary["avg_dxi_score"]
+        when "review_speed" then s.summary.dig("dimension_scores", "review_speed") || s.summary.dig("dimension_scores", "review_turnaround")
+        when "cycle_time" then s.summary.dig("dimension_scores", "cycle_time")
+        when "pr_size" then s.summary.dig("dimension_scores", "pr_size")
+        when "review_coverage" then s.summary.dig("dimension_scores", "review_coverage")
+        when "commit_frequency" then s.summary.dig("dimension_scores", "commit_frequency")
+        else s.summary["avg_dxi_score"]
+      end
+      [s.start_date.strftime("%b %d"), (score || 0).round(1)]
+    end
+
+    # Calculate overall trend (last - first)
+    first_score = trend_data.first&.last || 0
+    last_score = trend_data.last&.last || 0
+    overall_trend = last_score - first_score
+  end
+%>
+
 <div class="bg-card text-card-foreground rounded-xl border shadow-sm p-6">
-  <h3 class="font-semibold mb-4">DXI Trend</h3>
+  <%# Header with title and trend indicator %>
+  <div class="mb-4">
+    <h3 class="font-semibold">DXI Score Trend</h3>
+    <% if @sprint_history.present? && @sprint_history.size > 1 %>
+      <p class="text-sm">
+        Overall trend:
+        <span class="<%= overall_trend >= 0 ? 'text-green-500' : 'text-pink-500' %> font-medium">
+          <%= overall_trend >= 0 ? '+' : '' %><%= overall_trend.round(1) %>
+        </span>
+      </p>
+    <% end %>
+  </div>
+
   <% if @sprint_history.present? && @sprint_history.any? %>
-    <%= line_chart @sprint_history.map { |s|
-      [s.start_date.strftime("%b %d"), s.summary["avg_dxi_score"]&.round || 0]
-    },
-    colors: ["#6366f1"],
-    library: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
+    <%= line_chart trend_data,
+      colors: ["#6366f1"],
+      library: {
+        responsive: true,
+        maintainAspectRatio: false,
+        elements: {
+          line: {
+            tension: 0.3,
+            borderWidth: 2
+          },
+          point: {
+            radius: 4,
+            hoverRadius: 6,
+            backgroundColor: "#6366f1"
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: "line",
+                yMin: 75,
+                yMax: 75,
+                borderColor: "rgba(156, 163, 175, 0.5)",
+                borderWidth: 2,
+                borderDash: [5, 5]
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            grid: {
+              color: "rgba(0, 0, 0, 0.05)"
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
         }
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100
-        }
-      }
-    },
-    height: "300px" %>
+      height: "300px" %>
+
+    <%# Dimension filter tabs %>
+    <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+      <% [
+        ["dxi_score", "DXI Score"],
+        ["show_all", "Show all"],
+        ["review_speed", "Review Speed"],
+        ["cycle_time", "Cycle Time"],
+        ["pr_size", "PR Size"],
+        ["review_coverage", "Review Coverage"],
+        ["commit_frequency", "Commit Frequency"]
+      ].each do |key, label| %>
+        <% if key == "show_all" %>
+          <span class="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
+            <%= label %>
+          </span>
+        <% else %>
+          <%= link_to label,
+              dashboard_path(tab: "history", sprint: params[:sprint], dimension: key),
+              class: "text-sm #{dimension == key ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}" %>
+        <% end %>
+      <% end %>
+    </div>
   <% else %>
     <div class="flex items-center justify-center h-[300px] text-muted-foreground">
       No historical data available

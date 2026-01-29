@@ -1,72 +1,268 @@
 <%# Developer Detail View %>
 <%# locals: (developer:) %>
-<div class="space-y-6" data-testid="developer-detail">
-  <%# Back Button %>
-  <%= link_to dashboard_path(tab: "developers", sprint: params[:sprint]),
-      class: "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4" do %>
-    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-    </svg>
-    Back to Developers
-  <% end %>
+<%
+  # Extract developer stats
+  commits = developer["total_commits"] || developer["commits"] || 0
+  prs_merged = developer["prs_merged"] || 0
+  prs_opened = developer["prs_opened"] || 0
+  reviews = developer["reviews_given"] || 0
+  lines_changed = (developer["lines_added"] || 0) + (developer["lines_deleted"] || 0)
+  cycle_time = developer["avg_cycle_time_hours"]
+  review_time = developer["avg_review_time_hours"]
 
-  <%# Developer Header %>
+  # Developer dimension scores
+  dev_scores = developer["dimension_scores"] || {}
+
+  # Team dimension scores for comparison (passed from controller)
+  team_scores = @team_dimension_scores || {}
+%>
+
+<div class="space-y-6" data-testid="developer-detail">
+  <%# Back Button and Header %>
   <div class="flex items-center gap-4">
-    <span class="relative flex size-16 shrink-0 overflow-hidden rounded-full">
+    <%= link_to dashboard_path(tab: "developers", sprint: params[:sprint]),
+        class: "text-muted-foreground hover:text-foreground" do %>
+      <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    <% end %>
+    <span class="relative flex size-12 shrink-0 overflow-hidden rounded-full">
       <% if developer["avatar_url"].present? %>
         <img src="<%= developer["avatar_url"] %>" class="aspect-square size-full" alt="<%= developer["developer"] %>" />
       <% else %>
-        <span class="flex size-full items-center justify-center rounded-full bg-muted text-lg font-medium">
+        <span class="flex size-full items-center justify-center rounded-full bg-muted text-sm font-medium">
           <%= developer["developer"][0..1].upcase %>
         </span>
       <% end %>
     </span>
     <div>
-      <h2 class="text-2xl font-bold"><%= developer["developer"] %></h2>
-      <div class="flex items-center gap-2 mt-1">
-        <span class="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-sm font-medium
-          <%= badge_variant_class(developer["dxi_score"]) %>">
-          DXI: <%= developer["dxi_score"]&.round || 0 %>
-        </span>
-      </div>
+      <h2 class="text-xl font-bold"><%= developer["developer"] %></h2>
+      <span class="inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-medium
+        <%= badge_variant_class(developer["dxi_score"]) %>">
+        DXI Score: <%= developer["dxi_score"]&.round || 0 %>
+      </span>
     </div>
   </div>
 
-  <%# Stats Grid %>
+  <%# Primary Stats Grid - Row 1 %>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
     <div class="bg-card text-card-foreground rounded-xl border p-4">
       <div class="text-sm text-muted-foreground">Commits</div>
-      <div class="text-2xl font-bold"><%= developer["total_commits"] || developer["commits"] || 0 %></div>
-    </div>
-    <div class="bg-card text-card-foreground rounded-xl border p-4">
-      <div class="text-sm text-muted-foreground">PRs Opened</div>
-      <div class="text-2xl font-bold"><%= developer["prs_opened"] || 0 %></div>
+      <div class="text-2xl font-bold"><%= commits %></div>
     </div>
     <div class="bg-card text-card-foreground rounded-xl border p-4">
       <div class="text-sm text-muted-foreground">PRs Merged</div>
-      <div class="text-2xl font-bold"><%= developer["prs_merged"] || 0 %></div>
+      <div class="text-2xl font-bold"><%= prs_merged %>/<%= prs_opened %></div>
     </div>
     <div class="bg-card text-card-foreground rounded-xl border p-4">
       <div class="text-sm text-muted-foreground">Reviews Given</div>
-      <div class="text-2xl font-bold"><%= developer["reviews_given"] || 0 %></div>
+      <div class="text-2xl font-bold"><%= reviews %></div>
+    </div>
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">Lines Changed</div>
+      <div class="text-2xl font-bold"><%= number_with_delimiter(lines_changed) %></div>
     </div>
   </div>
 
-  <%# Dimension Scores %>
-  <% if developer["dimension_scores"].present? %>
-    <div class="bg-card text-card-foreground rounded-xl border p-6">
-      <h3 class="font-semibold mb-4">DXI Dimension Scores</h3>
-      <div class="space-y-3">
-        <% developer["dimension_scores"].each do |dimension, score| %>
-          <div class="flex items-center gap-4">
-            <div class="w-32 text-sm text-muted-foreground capitalize"><%= dimension.to_s.titleize %></div>
-            <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full transition-all" style="width: <%= score.to_i %>%"></div>
-            </div>
-            <div class="w-12 text-sm text-right"><%= score&.round || 0 %></div>
-          </div>
-        <% end %>
-      </div>
+  <%# Secondary Stats Grid - Row 2 %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">Avg Cycle Time</div>
+      <div class="text-2xl font-bold"><%= cycle_time ? "#{cycle_time.round(1)}h" : "--" %></div>
     </div>
-  <% end %>
+    <div class="bg-card text-card-foreground rounded-xl border p-4">
+      <div class="text-sm text-muted-foreground">Avg Review Time</div>
+      <div class="text-2xl font-bold"><%= review_time ? "#{review_time.round(1)}h" : "--" %></div>
+    </div>
+  </div>
+
+  <%# Developer vs Team and Dimension Breakdown %>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <%# Developer vs Team Radar Chart %>
+    <div class="bg-card text-card-foreground rounded-xl border p-6">
+      <h3 class="font-semibold mb-4">Developer vs Team</h3>
+      <% if dev_scores.present? && team_scores.present? %>
+        <div class="h-[250px]">
+          <canvas
+            data-controller="developer-comparison-chart"
+            data-developer-comparison-chart-dev-scores-value="<%= dev_scores.to_json %>"
+            data-developer-comparison-chart-team-scores-value="<%= team_scores.to_json %>"
+          ></canvas>
+        </div>
+        <div class="flex justify-center gap-4 mt-2 text-sm">
+          <span class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-muted rounded"></span> Team
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-primary rounded"></span> Developer
+          </span>
+        </div>
+      <% else %>
+        <div class="flex items-center justify-center h-[250px] text-muted-foreground">
+          No comparison data available
+        </div>
+      <% end %>
+    </div>
+
+    <%# Dimension Breakdown Table %>
+    <div class="bg-card text-card-foreground rounded-xl border p-6">
+      <h3 class="font-semibold mb-4">Dimension Breakdown</h3>
+      <% if dev_scores.present? %>
+        <div class="space-y-3">
+          <%
+            dimension_labels = {
+              "review_turnaround" => "Review Speed",
+              "review_speed" => "Review Speed",
+              "cycle_time" => "Cycle Time",
+              "pr_size" => "PR Size",
+              "review_coverage" => "Review Coverage",
+              "commit_frequency" => "Commit Frequency"
+            }
+          %>
+          <% dev_scores.each do |dimension, dev_score| %>
+            <%
+              label = dimension_labels[dimension.to_s] || dimension.to_s.titleize
+              team_score = team_scores[dimension.to_s] || team_scores[dimension.to_sym] || 0
+              delta = (dev_score.to_f - team_score.to_f).round
+              delta_class = delta > 0 ? "text-green-600" : (delta < 0 ? "text-red-600" : "text-muted-foreground")
+            %>
+            <div class="flex items-center justify-between py-1">
+              <div class="text-sm"><%= label %></div>
+              <div class="flex items-center gap-4 text-sm">
+                <span class="text-muted-foreground">Team: <%= team_score.round %></span>
+                <span class="font-semibold w-8 text-right"><%= dev_score.round %></span>
+                <span class="w-12 text-right <%= delta_class %>">
+                  <%= delta > 0 ? "+#{delta}" : delta %>
+                </span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="flex items-center justify-center h-[200px] text-muted-foreground">
+          No dimension data available
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Developer DXI Trend Chart %>
+  <%
+    # Get dimension filter from params
+    dev_dimension = params[:dev_dimension] || "dxi_score"
+    valid_dimensions = %w[dxi_score review_speed cycle_time pr_size review_coverage commit_frequency]
+    dev_dimension = "dxi_score" unless valid_dimensions.include?(dev_dimension)
+
+    # Build trend data (placeholder - would need developer history from controller)
+    # For now, just show current sprint point
+    dev_dxi = developer["dxi_score"] || 0
+    team_dxi = @team_avg_dxi || 59
+
+    # Calculate trend relative to team
+    dev_trend = dev_dxi - team_dxi
+    pace_comparison = if dev_trend > 0
+      "Above team pace"
+    elsif dev_trend < 0
+      "Below team pace"
+    else
+      "At team pace"
+    end
+  %>
+  <div class="bg-card text-card-foreground rounded-xl border p-6">
+    <div class="mb-4">
+      <h3 class="font-semibold">DXI Trend</h3>
+      <p class="text-sm">
+        Trend:
+        <span class="<%= dev_trend >= 0 ? 'text-green-500' : 'text-pink-500' %> font-medium">
+          <%= dev_trend >= 0 ? '+' : '' %><%= dev_trend.round(1) %>
+        </span>
+        <% if dev_trend != 0 %>
+          <span class="text-muted-foreground">
+            <%= dev_trend > 0 ? '↑' : '↓' %> <%= pace_comparison %>
+          </span>
+        <% end %>
+      </p>
+    </div>
+
+    <div class="h-[200px]">
+      <%= line_chart [
+        { name: "Developer DXI", data: { "Current Sprint" => dev_dxi } },
+        { name: "Team Avg", data: { "Current Sprint" => team_dxi } }
+      ],
+      colors: ["#6366f1", "#9ca3af"],
+      library: {
+        responsive: true,
+        maintainAspectRatio: false,
+        elements: {
+          line: {
+            tension: 0.3,
+            borderWidth: 2
+          },
+          point: {
+            radius: 4,
+            hoverRadius: 6
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: "line",
+                yMin: 75,
+                yMax: 75,
+                borderColor: "rgba(249, 115, 22, 0.5)",
+                borderWidth: 2,
+                borderDash: [5, 5]
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            grid: {
+              color: "rgba(0, 0, 0, 0.05)"
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      },
+      height: "200px" %>
+    </div>
+
+    <%# Dimension filter tabs %>
+    <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
+      <% [
+        ["dxi_score", "Developer DXI"],
+        ["team_avg", "Team Avg"],
+        ["review_speed", "Review Speed"],
+        ["cycle_time", "Cycle Time"],
+        ["pr_size", "PR Size"],
+        ["review_coverage", "Review Coverage"],
+        ["commit_frequency", "Commit Frequency"]
+      ].each do |key, label| %>
+        <% if key == "team_avg" %>
+          <span class="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
+            <%= label %>
+          </span>
+        <% else %>
+          <%= link_to label,
+              dashboard_path(tab: "developers", developer: developer["developer"], sprint: params[:sprint], dev_dimension: key),
+              class: "text-sm #{dev_dimension == key ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}" %>
+        <% end %>
+      <% end %>
+      <span class="text-sm text-muted-foreground ml-auto flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-muted-foreground"></span>
+        Show all
+      </span>
+    </div>
+  </div>
 </div>
