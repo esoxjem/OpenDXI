@@ -13,9 +13,7 @@ export default class extends Controller {
   get baseOptions() {
     return {
       chart: {
-        fontFamily: "inherit",
-        toolbar: { show: false },
-        animations: { enabled: true, easing: "easeinout", speed: 800 }
+        toolbar: { show: false }
       }
     }
   }

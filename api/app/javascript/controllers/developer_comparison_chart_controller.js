@@ -62,24 +62,9 @@ export default class extends ApexChartController {
         type: "radar",
         height: "100%"
       },
-      colors: ["#6366f1", "#9ca3af"],
-      fill: { opacity: [0.1, 0.05] },
-      stroke: { width: 2 },
-      markers: { size: 4, strokeWidth: 2, strokeColors: "#fff" },
-      xaxis: {
-        categories: categories,
-        labels: { style: { colors: "#71717a", fontSize: "11px" } }
-      },
-      yaxis: { min: 0, max: 100, tickAmount: 4, labels: { show: false } },
-      legend: { position: "bottom", markers: { radius: 3 } },
-      plotOptions: {
-        radar: {
-          polygons: {
-            strokeColors: "rgba(0,0,0,0.06)",
-            connectorColors: "rgba(0,0,0,0.06)"
-          }
-        }
-      }
+      xaxis: { categories: categories },
+      yaxis: { min: 0, max: 100 },
+      legend: { position: "bottom" }
     }
 
     this.chart = new ApexCharts(this.element, options)

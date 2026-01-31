@@ -6,8 +6,7 @@ import ApexChartController from "controllers/apex_chart_controller"
 //             data-dxi-radar-chart-scores-value='{"review_speed": 75, ...}'></div>
 export default class extends ApexChartController {
   static values = {
-    scores: Object,
-    color: { type: String, default: "#6366f1" }
+    scores: Object
   }
 
   connect() {
@@ -50,23 +49,8 @@ export default class extends ApexChartController {
         type: "radar",
         height: "100%"
       },
-      colors: [this.colorValue],
-      fill: { opacity: 0.1 },
-      stroke: { width: 2 },
-      markers: { size: 4, strokeWidth: 2, strokeColors: "#fff" },
-      xaxis: {
-        categories: categories,
-        labels: { style: { colors: "#71717a", fontSize: "11px" } }
-      },
-      yaxis: { min: 0, max: 100, tickAmount: 4, labels: { show: false } },
-      plotOptions: {
-        radar: {
-          polygons: {
-            strokeColors: "rgba(0,0,0,0.06)",
-            connectorColors: "rgba(0,0,0,0.06)"
-          }
-        }
-      }
+      xaxis: { categories: categories },
+      yaxis: { min: 0, max: 100 }
     }
 
     this.chart = new ApexCharts(this.element, options)
