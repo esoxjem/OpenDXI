@@ -20,7 +20,8 @@ module Api
       assert_not_nil json["user"]
       assert_equal "testuser", json["user"]["login"]
       assert_equal "Test User", json["user"]["name"]
-      assert_equal "12345", json["user"]["github_id"]
+      assert_equal 12345, json["user"]["github_id"]
+      assert_equal "developer", json["user"]["role"]
     end
 
     test "me returns authenticated false with login_url when not logged in" do

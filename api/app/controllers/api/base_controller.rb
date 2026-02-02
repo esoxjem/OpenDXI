@@ -69,17 +69,41 @@ module Api
     def current_user
       return @current_user if defined?(@current_user)
 
-      user = session[:user]
-      return @current_user = nil unless user
+      if skip_auth?
+        # Dev mode: return unpersisted User instance with owner role for testing
+        return @current_user = User.new(
+          id: 0,
+          github_id: 0,
+          login: "dev-user",
+          name: "Local Developer",
+          avatar_url: "",
+          role: :owner
+        )
+      end
 
-      # Validate session age
-      authenticated_at = Time.parse(session[:authenticated_at].to_s) rescue nil
-      if authenticated_at.nil? || authenticated_at < SESSION_MAX_AGE.ago
+      # New session format: user_id references User record
+      if session[:user_id]
+        # Validate session age
+        authenticated_at = Time.parse(session[:authenticated_at].to_s) rescue nil
+        if authenticated_at.nil? || authenticated_at < SESSION_MAX_AGE.ago
+          reset_session
+          return @current_user = nil
+        end
+
+        return @current_user = User.find_by(id: session[:user_id])
+      end
+
+      # Legacy session format: clear and require re-auth
+      if session[:user]
         reset_session
         return @current_user = nil
       end
 
-      @current_user = user
+      @current_user = nil
+    end
+
+    def require_owner!
+      head :forbidden unless current_user&.owner?
     end
 
     def user_still_authorized?
@@ -88,9 +112,8 @@ module Api
       allowed_users = Rails.application.config.opendxi.allowed_users
       return true if allowed_users.empty?
 
-      # Handle both symbol and string keys (session may serialize either way)
-      username = current_user[:login] || current_user["login"]
-      allowed_users.include?(username&.downcase)
+      # current_user is now a User model instance
+      allowed_users.include?(current_user.login&.downcase)
     end
 
     def api_rate_limited

@@ -4,20 +4,17 @@ class SessionsController < ApplicationController
   def create
     auth = request.env["omniauth.auth"]
 
-    user_info = {
-      github_id: auth["uid"],
-      login: auth["info"]["nickname"],
-      name: auth["info"]["name"],
-      avatar_url: auth["info"]["image"]
-    }
-
     # Verify user is in allowed list (if configured)
-    unless authorized_user?(user_info[:login])
+    unless authorized_user?(auth["info"]["nickname"])
       redirect_to failure_url("not_authorized"), allow_other_host: true
       return
     end
 
-    session[:user] = user_info
+    # Create or update user record in database
+    user = User.find_or_create_from_github(auth)
+
+    # Store user_id in session (not full user hash)
+    session[:user_id] = user.id
     session[:authenticated_at] = Time.current.iso8601
 
     redirect_to frontend_url, allow_other_host: true
