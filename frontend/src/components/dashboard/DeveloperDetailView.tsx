@@ -1,14 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TrendingUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { KpiCard } from "./KpiCard";
 import { DxiRadarChart } from "./DxiRadarChart";
 import { DeveloperTrendChart } from "./DeveloperTrendChart";
 import { LoadingMessage } from "@/components/ui/loading-message";
+import {
+  DimensionGauge,
+  getRawValueForDimension,
+} from "./components/DimensionGauge";
 import { useDeveloperHistory } from "@/hooks/useMetrics";
 import type { DeveloperMetrics, DimensionScores } from "@/types/metrics";
 
@@ -18,7 +27,9 @@ interface DeveloperDetailViewProps {
   onBack: () => void;
 }
 
-function getDxiBadgeVariant(score: number): "default" | "secondary" | "destructive" {
+function getDxiBadgeVariant(
+  score: number
+): "default" | "secondary" | "destructive" {
   if (score >= 70) return "default";
   if (score >= 50) return "secondary";
   return "destructive";
@@ -47,6 +58,32 @@ export function DeveloperDetailView({
     developer.developer,
     6
   );
+
+  // Map frontend dimension keys to backend keys
+  // Backend uses: review_turnaround, cycle_time, pr_size, review_coverage, commit_frequency
+  // Frontend DimensionScores uses: review_speed, cycle_time, pr_size, review_coverage, commit_frequency
+  const dimensionMapping = {
+    review_speed: {
+      developerScore: developer.dimension_scores.review_speed,
+      teamScore: teamScores.review_speed,
+    },
+    cycle_time: {
+      developerScore: developer.dimension_scores.cycle_time,
+      teamScore: teamScores.cycle_time,
+    },
+    pr_size: {
+      developerScore: developer.dimension_scores.pr_size,
+      teamScore: teamScores.pr_size,
+    },
+    review_coverage: {
+      developerScore: developer.dimension_scores.review_coverage,
+      teamScore: teamScores.review_coverage,
+    },
+    commit_frequency: {
+      developerScore: developer.dimension_scores.commit_frequency,
+      teamScore: teamScores.commit_frequency,
+    },
+  } as const;
 
   return (
     <motion.div
@@ -119,38 +156,56 @@ export function DeveloperDetailView({
           developerScores={developer.dimension_scores}
         />
 
-        {/* Dimension Breakdown */}
+        {/* Dimension Score Summary Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>Dimension Breakdown</CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                Score Overview
+              </CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px]">
+                  <p className="text-xs">
+                    Your scores across 5 weighted dimensions. Each gauge shows
+                    your position relative to thresholds. Expand &quot;Learn
+                    more&quot; for calculation details and improvement tips.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <DimensionRow
-                label="Review Speed"
-                developerScore={developer.dimension_scores.review_speed}
-                teamScore={teamScores.review_speed}
-              />
-              <DimensionRow
-                label="Cycle Time"
-                developerScore={developer.dimension_scores.cycle_time}
-                teamScore={teamScores.cycle_time}
-              />
-              <DimensionRow
-                label="PR Size"
-                developerScore={developer.dimension_scores.pr_size}
-                teamScore={teamScores.pr_size}
-              />
-              <DimensionRow
-                label="Review Coverage"
-                developerScore={developer.dimension_scores.review_coverage}
-                teamScore={teamScores.review_coverage}
-              />
-              <DimensionRow
-                label="Commit Frequency"
-                developerScore={developer.dimension_scores.commit_frequency}
-                teamScore={teamScores.commit_frequency}
-              />
+            <div className="grid grid-cols-1 gap-2">
+              {(
+                [
+                  "review_speed",
+                  "cycle_time",
+                  "pr_size",
+                  "review_coverage",
+                  "commit_frequency",
+                ] as const
+              ).map((dimension, index) => {
+                const { developerScore, teamScore } =
+                  dimensionMapping[dimension];
+                const rawValue = getRawValueForDimension(dimension, developer);
+
+                return (
+                  <DimensionGauge
+                    key={dimension}
+                    dimension={dimension}
+                    score={developerScore}
+                    teamScore={teamScore}
+                    rawValue={rawValue}
+                    index={index}
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -163,7 +218,11 @@ export function DeveloperDetailView({
             <CardTitle>DXI Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <LoadingMessage message={`Loading ${developer.developer}'s history...`} className="h-[350px]" testId="loading-developer-history" />
+            <LoadingMessage
+              message={`Loading ${developer.developer}'s history...`}
+              className="h-[350px]"
+              testId="loading-developer-history"
+            />
           </CardContent>
         </Card>
       ) : historyData ? (
@@ -173,36 +232,5 @@ export function DeveloperDetailView({
         />
       ) : null}
     </motion.div>
-  );
-}
-
-function DimensionRow({
-  label,
-  developerScore,
-  teamScore,
-}: {
-  label: string;
-  developerScore: number;
-  teamScore: number;
-}) {
-  const diff = developerScore - teamScore;
-  const diffColor = diff >= 0 ? "text-green-600" : "text-red-600";
-  const diffSign = diff >= 0 ? "+" : "";
-
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-muted-foreground">
-          Team: {teamScore.toFixed(0)}
-        </span>
-        <span className="text-sm font-semibold w-12 text-right">
-          {developerScore.toFixed(0)}
-        </span>
-        <span className={`text-xs w-12 text-right ${diffColor}`}>
-          {diffSign}{diff.toFixed(0)}
-        </span>
-      </div>
-    </div>
   );
 }
