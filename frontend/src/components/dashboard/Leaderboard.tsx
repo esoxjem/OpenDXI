@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { ColumnTooltip } from "./components/ColumnTooltip";
+import { LEADERBOARD_TOOLTIPS } from "./components/dimension-config";
 import type { DeveloperMetrics, SortKey } from "@/types/metrics";
 
 interface LeaderboardProps {
@@ -80,12 +82,42 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
             <TableRow>
               <TableHead className="w-12">Rank</TableHead>
               <TableHead>Developer</TableHead>
-              <TableHead className="text-center">DXI Score</TableHead>
-              <TableHead className="text-center">Commits</TableHead>
-              <TableHead className="text-center">PRs</TableHead>
-              <TableHead className="text-center">Reviews</TableHead>
-              <TableHead className="text-center">Cycle Time</TableHead>
-              <TableHead className="text-right">Lines Changed</TableHead>
+              <TableHead className="text-center">
+                <ColumnTooltip
+                  label="DXI Score"
+                  tooltip={LEADERBOARD_TOOLTIPS.dxi_score}
+                />
+              </TableHead>
+              <TableHead className="text-center">
+                <ColumnTooltip
+                  label="Commits"
+                  tooltip={LEADERBOARD_TOOLTIPS.commits}
+                />
+              </TableHead>
+              <TableHead className="text-center">
+                <ColumnTooltip
+                  label="PRs"
+                  tooltip={LEADERBOARD_TOOLTIPS.prs}
+                />
+              </TableHead>
+              <TableHead className="text-center">
+                <ColumnTooltip
+                  label="Reviews"
+                  tooltip={LEADERBOARD_TOOLTIPS.reviews}
+                />
+              </TableHead>
+              <TableHead className="text-center">
+                <ColumnTooltip
+                  label="Cycle Time"
+                  tooltip={LEADERBOARD_TOOLTIPS.cycle_time}
+                />
+              </TableHead>
+              <TableHead className="text-right">
+                <ColumnTooltip
+                  label="Lines Changed"
+                  tooltip={LEADERBOARD_TOOLTIPS.lines_changed}
+                />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
