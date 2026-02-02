@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_26_163736) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_02_170510) do
   create_table "job_statuses", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "error"
@@ -32,5 +32,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_26_163736) do
     t.index ["start_date", "end_date"], name: "index_sprints_on_dates_unique", unique: true
     t.index ["start_date"], name: "index_sprints_on_start_date"
     t.index ["updated_at"], name: "index_sprints_on_updated_at"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "avatar_url", default: "", null: false
+    t.datetime "created_at", null: false
+    t.bigint "github_id", null: false
+    t.string "login", null: false
+    t.string "name"
+    t.integer "role", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["github_id"], name: "index_users_on_github_id", unique: true
+    t.index ["login"], name: "index_users_on_login", unique: true
   end
 end
