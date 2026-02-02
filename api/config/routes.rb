@@ -36,5 +36,8 @@ Rails.application.routes.draw do
     # Developer endpoints
     get "developers", to: "developers#index"
     get "developers/:name/history", to: "developers#history", as: :developer_history
+
+    # User management (owner-only)
+    resources :users, only: [:index, :update]
   end
 end
