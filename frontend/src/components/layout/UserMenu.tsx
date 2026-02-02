@@ -2,10 +2,12 @@
  * User dropdown menu showing avatar, name, and logout option.
  *
  * Displayed in the dashboard header when user is authenticated.
+ * Shows Settings link only for users with owner role.
  */
 
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -16,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 export function UserMenu() {
   const { user, logout, isLoading } = useAuth();
@@ -49,6 +51,17 @@ export function UserMenu() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.role === "owner" && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/settings" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem
           onClick={logout}
           className="text-destructive cursor-pointer focus:text-destructive"

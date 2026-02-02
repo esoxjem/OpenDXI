@@ -18,10 +18,12 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export interface AuthUser {
+  id: number;
   github_id: number;
   login: string;
   name: string | null;
   avatar_url: string;
+  role: "owner" | "developer";
 }
 
 export interface AuthStatus {
