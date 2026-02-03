@@ -31,20 +31,21 @@ module Api
       # Skip authentication entirely in development when SKIP_AUTH is set
       return if skip_auth?
 
-      unless current_user
+      # Check if user had a session but was deleted (access revoked)
+      # Must check BEFORE current_user because current_user returns nil for deleted users
+      if session[:user_id] && !user_still_authorized?
+        reset_session
         return render json: {
-          error: "unauthorized",
-          detail: "Please log in to access this resource",
+          error: "access_revoked",
+          detail: "Your access has been revoked. Please contact an administrator.",
           login_url: "/auth/github"
         }, status: :unauthorized
       end
 
-      # Re-check authorization on every request (user may have been removed from allowlist)
-      unless user_still_authorized?
-        reset_session
-        render json: {
-          error: "access_revoked",
-          detail: "Your access has been revoked. Please contact an administrator.",
+      unless current_user
+        return render json: {
+          error: "unauthorized",
+          detail: "Please log in to access this resource",
           login_url: "/auth/github"
         }, status: :unauthorized
       end
@@ -107,16 +108,11 @@ module Api
     end
 
     def user_still_authorized?
-      return true unless current_user
-
       # When auth is skipped (dev mode), always authorized
       return true if skip_auth?
 
-      allowed_users = Rails.application.config.opendxi.allowed_users
-      return true if allowed_users.empty?
-
-      # current_user is now a User model instance
-      allowed_users.include?(current_user.login&.downcase)
+      # Database is the single source of truth - check user still exists
+      User.exists?(id: session[:user_id])
     end
 
     def api_rate_limited

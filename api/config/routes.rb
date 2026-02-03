@@ -38,6 +38,6 @@ Rails.application.routes.draw do
     get "developers/:name/history", to: "developers#history", as: :developer_history
 
     # User management (owner-only)
-    resources :users, only: [:index, :update]
+    resources :users, only: [:index, :create, :update, :destroy]
   end
 end

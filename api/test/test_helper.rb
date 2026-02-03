@@ -7,10 +7,6 @@ require "rails/test_help"
 # Configure OmniAuth for testing
 OmniAuth.config.test_mode = true
 
-# Clear allowed_users for tests (the .env file may have real users configured)
-# Tests that need to verify authorization behavior will set this explicitly
-Rails.application.config.opendxi.allowed_users = []
-
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers

@@ -11,7 +11,19 @@ module Api
     # GET /api/auth/me
     # Returns current user info or 401 with login URL
     def me
-      if current_user && user_still_authorized?
+      # Check for access revoked FIRST - before current_user
+      # This catches the case where a user had a session but was deleted
+      if session[:user_id] && !user_still_authorized?
+        reset_session
+        return render json: {
+          authenticated: false,
+          error: "access_revoked",
+          detail: "Your access has been revoked.",
+          login_url: "/auth/github"
+        }, status: :unauthorized
+      end
+
+      if current_user
         render json: {
           authenticated: true,
           user: {
@@ -23,15 +35,6 @@ module Api
             role: current_user.role
           }
         }
-      elsif current_user && !user_still_authorized?
-        # User's access was revoked - clear session and return unauthorized
-        reset_session
-        render json: {
-          authenticated: false,
-          error: "access_revoked",
-          detail: "Your access has been revoked.",
-          login_url: "/auth/github"
-        }, status: :unauthorized
       else
         render json: { authenticated: false, login_url: "/auth/github" }, status: :unauthorized
       end
