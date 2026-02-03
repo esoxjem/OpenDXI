@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,7 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Trash2, Loader2 } from "lucide-react";
+import { UserPlus, Trash2, Loader2, ArrowLeft } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -237,7 +238,14 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/">
+          <Button variant="ghost" size="icon" title="Back to dashboard">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold">Settings</h1>
+      </div>
 
       <section>
         <div className="flex items-center justify-between mb-4">
