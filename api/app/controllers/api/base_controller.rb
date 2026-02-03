@@ -109,6 +109,9 @@ module Api
     def user_still_authorized?
       return true unless current_user
 
+      # When auth is skipped (dev mode), always authorized
+      return true if skip_auth?
+
       allowed_users = Rails.application.config.opendxi.allowed_users
       return true if allowed_users.empty?
 
