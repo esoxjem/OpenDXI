@@ -11,26 +11,30 @@ module Api
     # GET /api/auth/me
     # Returns current user info or 401 with login URL
     def me
-      # When auth is skipped, return a fake dev user
-      # NOTE: Must include all fields that match frontend's AuthUser interface
-      if skip_auth?
-        return render json: {
-          authenticated: true,
-          user: { github_id: 0, login: "dev-user", name: "Local Developer", avatar_url: "" }
-        }
-      end
-
-      if current_user && user_still_authorized?
-        render json: { authenticated: true, user: current_user }
-      elsif current_user && !user_still_authorized?
-        # User's access was revoked - clear session and return unauthorized
+      # Check for access revoked FIRST - before current_user
+      # This catches the case where a user had a session but was deleted
+      if session[:user_id] && !user_still_authorized?
         reset_session
-        render json: {
+        return render json: {
           authenticated: false,
           error: "access_revoked",
           detail: "Your access has been revoked.",
           login_url: "/auth/github"
         }, status: :unauthorized
+      end
+
+      if current_user
+        render json: {
+          authenticated: true,
+          user: {
+            id: current_user.id,
+            github_id: current_user.github_id,
+            login: current_user.login,
+            name: current_user.name,
+            avatar_url: current_user.avatar_url,
+            role: current_user.role
+          }
+        }
       else
         render json: { authenticated: false, login_url: "/auth/github" }, status: :unauthorized
       end
