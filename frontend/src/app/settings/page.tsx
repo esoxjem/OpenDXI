@@ -2,16 +2,17 @@
  * Settings page for user management.
  *
  * Only accessible to users with owner role.
- * Displays list of all users with role dropdowns for assignment.
+ * Allows adding users by GitHub handle, removing users, and changing roles.
  */
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { UserPlus, Trash2, Loader2 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -29,6 +52,8 @@ interface User {
   name: string | null;
   avatar_url: string;
   role: "owner" | "developer";
+  last_login_at: string | null;
+  created_at: string;
 }
 
 interface UsersResponse {
@@ -39,6 +64,15 @@ export default function SettingsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // State for Add User dialog
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [newUserLogin, setNewUserLogin] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // State for Delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Redirect non-owners after auth loads
   useEffect(() => {
@@ -77,7 +111,6 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error("Failed to update role");
       return res.json();
     },
-    // Optimistic update
     onMutate: async ({ id, role }) => {
       await queryClient.cancelQueries({ queryKey: ["users"] });
       const previousUsers = queryClient.getQueryData<UsersResponse>(["users"]);
@@ -94,16 +127,99 @@ export default function SettingsPage() {
       return { previousUsers };
     },
     onError: (_err, _vars, context) => {
-      // Rollback on error
       if (context?.previousUsers) {
         queryClient.setQueryData(["users"], context.previousUsers);
       }
     },
     onSettled: () => {
-      // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
+
+  // Add user mutation
+  const addUser = useMutation({
+    mutationFn: async (login: string) => {
+      const res = await fetch(`${API_BASE}/api/users`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to add user");
+      }
+      return data;
+    },
+    onSuccess: () => {
+      setAddDialogOpen(false);
+      setNewUserLogin("");
+      setAddError(null);
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (error: Error) => {
+      setAddError(error.message);
+    },
+  });
+
+  // Delete user mutation
+  const deleteUser = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_BASE}/api/users/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to remove user");
+      }
+      return data;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["users"] });
+      const previousUsers = queryClient.getQueryData<UsersResponse>(["users"]);
+
+      queryClient.setQueryData<UsersResponse>(["users"], (old) => {
+        if (!old) return old;
+        return {
+          users: old.users.filter((u) => u.id !== id),
+        };
+      });
+
+      return { previousUsers };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousUsers) {
+        queryClient.setQueryData(["users"], context.previousUsers);
+      }
+    },
+    onSuccess: () => {
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const login = newUserLogin.trim().replace(/^@/, "");
+    if (!login) return;
+    setAddError(null);
+    addUser.mutate(login);
+  };
+
+  const handleDeleteClick = (userToRemove: User) => {
+    setUserToDelete(userToRemove);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUser.mutate(userToDelete.id);
+    }
+  };
 
   // Show loading while checking auth
   if (authLoading) {
@@ -124,7 +240,60 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <section>
-        <h2 className="text-lg font-semibold mb-4">Users</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Users</h2>
+
+          {/* Add User Dialog */}
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add User</DialogTitle>
+                <DialogDescription>
+                  Enter a GitHub username to add them to this application.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddUser}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="github-handle">GitHub Username</Label>
+                    <Input
+                      id="github-handle"
+                      placeholder="username"
+                      value={newUserLogin}
+                      onChange={(e) => setNewUserLogin(e.target.value)}
+                      disabled={addUser.isPending}
+                    />
+                    {addError && (
+                      <p className="text-sm text-destructive">{addError}</p>
+                    )}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAddDialogOpen(false)}
+                    disabled={addUser.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={addUser.isPending || !newUserLogin.trim()}>
+                    {addUser.isPending && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    Add User
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {isLoading ? (
           <p className="text-muted-foreground">Loading users...</p>
@@ -147,25 +316,47 @@ export default function SettingsPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{u.login}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{u.login}</p>
+                      {u.id === user?.id && (
+                        <span className="text-xs text-muted-foreground">(you)</span>
+                      )}
+                    </div>
                     {u.name && (
                       <p className="text-sm text-muted-foreground">{u.name}</p>
                     )}
+                    {!u.last_login_at && (
+                      <p className="text-xs text-muted-foreground italic">Never logged in</p>
+                    )}
                   </div>
                 </div>
-                <Select
-                  value={u.role}
-                  onValueChange={(role) => updateRole.mutate({ id: u.id, role })}
-                  disabled={updateRole.isPending}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={u.role}
+                    onValueChange={(role) => updateRole.mutate({ id: u.id, role })}
+                    disabled={updateRole.isPending}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {/* Don't show delete for current user */}
+                  {u.id !== user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(u)}
+                      disabled={deleteUser.isPending}
+                      title="Remove user"
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
             {data?.users.length === 0 && (
@@ -176,6 +367,32 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{userToDelete?.login}</strong> from
+              this application? They will lose access immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteUser.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteUser.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteUser.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
