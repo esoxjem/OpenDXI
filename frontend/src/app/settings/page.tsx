@@ -352,18 +352,15 @@ export default function SettingsPage() {
                       <SelectItem value="owner">Owner</SelectItem>
                     </SelectContent>
                   </Select>
-                  {/* Don't show delete for current user */}
-                  {u.id !== user?.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(u)}
-                      disabled={deleteUser.isPending}
-                      title="Remove user"
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteClick(u)}
+                    disabled={deleteUser.isPending || u.id === user?.id}
+                    title={u.id === user?.id ? "You cannot remove yourself" : "Remove user"}
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                  </Button>
                 </div>
               </div>
             ))}
