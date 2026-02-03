@@ -1,0 +1,15 @@
+# Test fixtures for User model
+
+alice:
+  github_id: 100001
+  login: alice
+  name: Alice Developer
+  avatar_url: https://github.com/alice.png
+  role: 0  # developer
+
+bob:
+  github_id: 100002
+  login: bob
+  name: Bob Owner
+  avatar_url: https://github.com/bob.png
+  role: 1  # owner

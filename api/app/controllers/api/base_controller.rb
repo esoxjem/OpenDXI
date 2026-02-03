@@ -31,20 +31,21 @@ module Api
       # Skip authentication entirely in development when SKIP_AUTH is set
       return if skip_auth?
 
-      unless current_user
+      # Check if user had a session but was deleted (access revoked)
+      # Must check BEFORE current_user because current_user returns nil for deleted users
+      if session[:user_id] && !user_still_authorized?
+        reset_session
         return render json: {
-          error: "unauthorized",
-          detail: "Please log in to access this resource",
+          error: "access_revoked",
+          detail: "Your access has been revoked. Please contact an administrator.",
           login_url: "/auth/github"
         }, status: :unauthorized
       end
 
-      # Re-check authorization on every request (user may have been removed from allowlist)
-      unless user_still_authorized?
-        reset_session
-        render json: {
-          error: "access_revoked",
-          detail: "Your access has been revoked. Please contact an administrator.",
+      unless current_user
+        return render json: {
+          error: "unauthorized",
+          detail: "Please log in to access this resource",
           login_url: "/auth/github"
         }, status: :unauthorized
       end
@@ -69,28 +70,49 @@ module Api
     def current_user
       return @current_user if defined?(@current_user)
 
-      user = session[:user]
-      return @current_user = nil unless user
+      if skip_auth?
+        # Dev mode: return unpersisted User instance with owner role for testing
+        return @current_user = User.new(
+          id: 0,
+          github_id: 0,
+          login: "dev-user",
+          name: "Local Developer",
+          avatar_url: "",
+          role: :owner
+        )
+      end
 
-      # Validate session age
-      authenticated_at = Time.parse(session[:authenticated_at].to_s) rescue nil
-      if authenticated_at.nil? || authenticated_at < SESSION_MAX_AGE.ago
+      # New session format: user_id references User record
+      if session[:user_id]
+        # Validate session age
+        authenticated_at = Time.parse(session[:authenticated_at].to_s) rescue nil
+        if authenticated_at.nil? || authenticated_at < SESSION_MAX_AGE.ago
+          reset_session
+          return @current_user = nil
+        end
+
+        return @current_user = User.find_by(id: session[:user_id])
+      end
+
+      # Legacy session format: clear and require re-auth
+      if session[:user]
         reset_session
         return @current_user = nil
       end
 
-      @current_user = user
+      @current_user = nil
+    end
+
+    def require_owner!
+      head :forbidden unless current_user&.owner?
     end
 
     def user_still_authorized?
-      return true unless current_user
+      # When auth is skipped (dev mode), always authorized
+      return true if skip_auth?
 
-      allowed_users = Rails.application.config.opendxi.allowed_users
-      return true if allowed_users.empty?
-
-      # Handle both symbol and string keys (session may serialize either way)
-      username = current_user[:login] || current_user["login"]
-      allowed_users.include?(username&.downcase)
+      # Database is the single source of truth - check user still exists
+      User.exists?(id: session[:user_id])
     end
 
     def api_rate_limited

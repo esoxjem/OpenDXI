@@ -43,12 +43,21 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_match(/error=unknown_error/, response.location)
   end
+
   # ═══════════════════════════════════════════════════════════════════════════
-  # OAuth Callback (create) - Using OmniAuth mock
+  # OAuth Callback (create) - Database-based authorization
   # ═══════════════════════════════════════════════════════════════════════════
 
-  test "create sets session and redirects on successful OAuth" do
-    mock_github_auth
+  test "create allows login for registered user" do
+    # Pre-register the user in the database
+    user = User.create!(
+      github_id: 12345,
+      login: "testuser",
+      name: "Test User",
+      avatar_url: "https://github.com/testuser.png"
+    )
+
+    mock_github_auth(github_id: user.github_id, login: user.login, name: user.name, avatar_url: user.avatar_url)
 
     get "/auth/github/callback"
 
@@ -64,12 +73,9 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test User", json["user"]["name"]
   end
 
-  test "create rejects unauthorized user when allowed_users configured" do
-    # Configure allowed users to NOT include our test user
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
-    Rails.application.config.opendxi.allowed_users = ["otheruser"]
-
-    mock_github_auth  # testuser is not in allowed list
+  test "create rejects unregistered user" do
+    # User NOT in database
+    mock_github_auth(github_id: 99999, login: "unregistereduser", name: "Unregistered", avatar_url: "https://github.com/unreg.png")
 
     get "/auth/github/callback"
 
@@ -79,31 +85,81 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     # Verify session was NOT created
     get "/api/auth/me"
     assert_response :unauthorized
-  ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
   end
 
-  test "create allows any user when allowed_users is empty" do
-    # Ensure allowed users is empty
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
-    Rails.application.config.opendxi.allowed_users = []
+  test "create bootstraps owner when OWNER_GITHUB_USERNAME matches and no owners exist" do
+    ENV["OWNER_GITHUB_USERNAME"] = "bootstrapowner"
 
-    mock_github_auth
+    # Ensure no owners exist
+    User.where(role: :owner).destroy_all
+
+    mock_github_auth(github_id: 777777, login: "bootstrapowner", name: "Bootstrap Owner", avatar_url: "https://github.com/bootstrap.png")
 
     get "/auth/github/callback"
 
     assert_response :redirect
     refute_match(/error=/, response.location)
 
-    # Verify session was created
-    get "/api/auth/me"
-    assert_response :success
+    # Verify user was created as owner
+    user = User.find_by(github_id: 777777)
+    assert user.present?, "User should have been created"
+    assert user.owner?, "User should be owner"
   ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
+    ENV.delete("OWNER_GITHUB_USERNAME")
+  end
+
+  test "create does not bootstrap owner if owners already exist" do
+    ENV["OWNER_GITHUB_USERNAME"] = "wouldbeowner"
+
+    # Ensure an owner exists
+    User.find_or_create_by!(github_id: 111111, login: "existingowner") do |u|
+      u.name = "Existing Owner"
+      u.avatar_url = "https://github.com/existingowner.png"
+      u.role = :owner
+    end
+
+    mock_github_auth(github_id: 888888, login: "wouldbeowner", name: "Would Be Owner", avatar_url: "https://github.com/wouldbe.png")
+
+    get "/auth/github/callback"
+
+    # Should be rejected since user is not in database and bootstrap condition not met
+    assert_response :redirect
+    assert_match(/error=not_authorized/, response.location)
+
+    # User should NOT have been created
+    assert_nil User.find_by(github_id: 888888)
+  ensure
+    ENV.delete("OWNER_GITHUB_USERNAME")
+  end
+
+  test "create updates last_login_at for existing user" do
+    user = User.create!(
+      github_id: 12345,
+      login: "testuser",
+      name: "Test User",
+      avatar_url: "https://github.com/testuser.png",
+      last_login_at: nil
+    )
+
+    mock_github_auth(github_id: user.github_id, login: user.login, name: user.name, avatar_url: user.avatar_url)
+
+    freeze_time do
+      get "/auth/github/callback"
+
+      user.reload
+      assert_equal Time.current, user.last_login_at
+    end
   end
 
   test "create stores authenticated_at timestamp in session" do
-    mock_github_auth
+    user = User.create!(
+      github_id: 12345,
+      login: "testuser",
+      name: "Test User",
+      avatar_url: "https://github.com/testuser.png"
+    )
+
+    mock_github_auth(github_id: user.github_id, login: user.login, name: user.name, avatar_url: user.avatar_url)
 
     freeze_time do
       get "/auth/github/callback"
@@ -150,21 +206,16 @@ class SessionSecurityTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "removing user from allowed_users revokes access immediately" do
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
-
-    # Start with testuser in allowed list
-    Rails.application.config.opendxi.allowed_users = ["testuser"]
-
-    # Sign in as testuser
-    sign_in_as(login: "testuser", name: "Test User", github_id: 12345, avatar_url: "https://github.com/test.png")
+  test "deleting user from database revokes access immediately" do
+    # Sign in as a specific user
+    user = sign_in_as(login: "testuser", name: "Test User", github_id: 12345, avatar_url: "https://github.com/test.png")
 
     # Verify authenticated
     get "/api/auth/me"
     assert_response :success
 
-    # Now remove testuser from allowed list
-    Rails.application.config.opendxi.allowed_users = ["otheruser"]
+    # Now delete the user from database (simulating owner removing them)
+    user.destroy!
 
     # Next request should be rejected
     get "/api/auth/me"
@@ -172,30 +223,5 @@ class SessionSecurityTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal false, json["authenticated"]
     assert_equal "access_revoked", json["error"]
-  ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
-  end
-
-  test "user remains authorized when allowed_users becomes empty" do
-    original_allowed_users = Rails.application.config.opendxi.allowed_users
-
-    # Start with testuser in allowed list
-    Rails.application.config.opendxi.allowed_users = ["testuser"]
-
-    # Sign in
-    sign_in_as(login: "testuser", name: "Test User", github_id: 12345, avatar_url: "https://github.com/test.png")
-
-    # Verify authenticated
-    get "/api/auth/me"
-    assert_response :success
-
-    # Make allowed_users empty (allow everyone)
-    Rails.application.config.opendxi.allowed_users = []
-
-    # User should still be authorized
-    get "/api/auth/me"
-    assert_response :success
-  ensure
-    Rails.application.config.opendxi.allowed_users = original_allowed_users
   end
 end

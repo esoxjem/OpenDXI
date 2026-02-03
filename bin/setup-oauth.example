@@ -180,14 +180,14 @@ if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
 fi
 
 echo ""
-echo -e "${GREEN}Step 3: Configure Allowed Users (Optional)${NC}"
+echo -e "${GREEN}Step 3: Configure Bootstrap Owner${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "You can restrict access to specific GitHub usernames."
-echo "Leave empty to allow all authenticated GitHub users."
+echo "Enter the GitHub username that should be the first owner."
+echo "This user can then add other users via the Settings UI."
 echo ""
-echo -e "${YELLOW}Enter allowed usernames (comma-separated, or leave empty):${NC}"
-read -r ALLOWED_USERS
+echo -e "${YELLOW}Enter owner GitHub username:${NC}"
+read -r OWNER_USERNAME
 
 echo ""
 echo -e "${GREEN}Step 4: Update Environment Files${NC}"
@@ -230,7 +230,7 @@ else
   update_env "$ENV_FILE" "GITHUB_OAUTH_CLIENT_ID" "$CLIENT_ID"
   update_env "$ENV_FILE" "GITHUB_OAUTH_CLIENT_SECRET" "$CLIENT_SECRET"
   update_env "$ENV_FILE" "GITHUB_OAUTH_CALLBACK_URL" "$CALLBACK_URL"
-  update_env "$ENV_FILE" "GITHUB_ALLOWED_USERS" "$ALLOWED_USERS"
+  update_env "$ENV_FILE" "OWNER_GITHUB_USERNAME" "$OWNER_USERNAME"
   update_env "$ENV_FILE" "FRONTEND_URL" "$FRONTEND_URL"
   update_env "$ENV_FILE" "CORS_ORIGINS" "$FRONTEND_URL"
 
@@ -266,8 +266,8 @@ if [ "$PRODUCTION_MODE" = true ]; then
   echo "GITHUB_OAUTH_CALLBACK_URL=${CALLBACK_URL}"
   echo "FRONTEND_URL=${FRONTEND_URL}"
   echo "CORS_ORIGINS=${FRONTEND_URL}"
-  if [ -n "$ALLOWED_USERS" ]; then
-    echo "GITHUB_ALLOWED_USERS=${ALLOWED_USERS}"
+  if [ -n "$OWNER_USERNAME" ]; then
+    echo "OWNER_GITHUB_USERNAME=${OWNER_USERNAME}"
   fi
   echo ""
   echo -e "${YELLOW}Also required (not set by this script):${NC}"
@@ -294,9 +294,9 @@ else
   echo "Then visit ${FRONTEND_URL} and click 'Sign in with GitHub'."
   echo ""
 
-  if [ -n "$ALLOWED_USERS" ]; then
-    echo -e "${YELLOW}Note:${NC} Only these users can access the dashboard:"
-    echo "  $ALLOWED_USERS"
+  if [ -n "$OWNER_USERNAME" ]; then
+    echo -e "${YELLOW}Note:${NC} The first owner will be: ${OWNER_USERNAME}"
+    echo "  After logging in, use Settings to add other users."
     echo ""
   fi
 

@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
+# Clean up stale processes and PID files
+echo "🧹 Cleaning up..."
+
+# Remove stale Rails PID file
+rm -f api/tmp/pids/server.pid
+
+# Kill any processes on ports 3000 (Rails) and 3001 (Next.js)
+lsof -ti :3000 -ti :3001 2>/dev/null | xargs kill -9 2>/dev/null || true
+
+echo "🚀 Starting development servers..."
+
 # Check for overmind or foreman
 if command -v overmind &> /dev/null; then
   exec overmind start -f Procfile.dev "$@"

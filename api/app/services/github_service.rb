@@ -12,8 +12,10 @@ class GithubService
   class GitHubApiError < StandardError; end
   class RateLimitExceeded < GitHubApiError; end
   class AuthenticationError < GitHubApiError; end
+  class UserNotFoundError < GitHubApiError; end
 
   GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
+  GITHUB_REST_URL = "https://api.github.com"
 
   REPOS_QUERY = <<~GRAPHQL
     query($org: String!, $cursor: String) {
@@ -165,7 +167,51 @@ class GithubService
       }
     end
 
+    # Fetches a GitHub user by login (username) via REST API.
+    #
+    # @param login [String] GitHub username
+    # @return [Hash, nil] User data hash or nil if not found
+    # @raise [GitHubApiError] on API errors (except 404)
+    def fetch_user_by_login(login)
+      response = rest_connection.get("users/#{login}")
+
+      case response.status
+      when 200
+        data = JSON.parse(response.body)
+        {
+          github_id: data["id"],
+          login: data["login"],
+          name: data["name"],
+          avatar_url: data["avatar_url"]
+        }
+      when 404
+        nil
+      when 401
+        raise AuthenticationError, "GitHub authentication failed. Check GH_TOKEN."
+      when 403
+        if response.headers["X-RateLimit-Remaining"] == "0"
+          raise RateLimitExceeded, "GitHub API rate limit exceeded"
+        else
+          raise AuthenticationError, "GitHub API permission denied."
+        end
+      else
+        raise GitHubApiError, "GitHub API error: #{response.status}"
+      end
+    rescue Faraday::Error => e
+      raise GitHubApiError, "Connection failed: #{e.message}"
+    end
+
     private
+
+    def rest_connection
+      @rest_connection ||= Faraday.new(url: GITHUB_REST_URL) do |f|
+        f.request :authorization, "Bearer", ENV.fetch("GH_TOKEN") {
+          raise GitHubApiError, "GH_TOKEN not set"
+        }
+        f.options.timeout = 30
+        f.options.open_timeout = 10
+      end
+    end
 
     def config
       Rails.application.config.opendxi

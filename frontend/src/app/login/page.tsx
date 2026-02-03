@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Github, AlertCircle } from "lucide-react";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  not_authorized: "Access denied. You are not in the list of authorized users.",
+  not_authorized: "Access denied. Please contact an administrator to be added to this application.",
   access_denied: "You denied access to the application.",
   unknown_error: "An error occurred during authentication. Please try again.",
 };
@@ -74,7 +74,7 @@ function LoginContent() {
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            Only authorized GitHub users can access this application.
+            You must be added by an administrator to access this application.
           </p>
         </CardContent>
       </Card>
