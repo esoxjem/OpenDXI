@@ -35,7 +35,13 @@ Rails.application.routes.draw do
 
     # Developer endpoints
     get "developers", to: "developers#index"
+    get "developers/managed", to: "developers#managed"
+    patch "developers/:id", to: "developers#update", as: :developer
+    post "developers/sync", to: "developers#sync"
     get "developers/:name/history", to: "developers#history", as: :developer_history
+
+    # Team management
+    resources :teams, only: [:index, :create, :update, :destroy]
 
     # User management (owner-only)
     resources :users, only: [:index, :create, :update, :destroy]

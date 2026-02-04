@@ -133,6 +133,153 @@ module Api
     end
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # GET /api/developers/managed (owner-only)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    test "managed returns all developer records with teams for owner" do
+      sign_in_as(role: :owner)
+
+      get "/api/developers/managed"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      assert json.key?("developers")
+      devs = json["developers"]
+
+      logins = devs.map { |d| d["github_login"] }
+      assert_includes logins, "alice"
+      assert_includes logins, "bob"
+      assert_includes logins, "hidden-user"
+
+      # Each developer should include team info
+      alice = devs.find { |d| d["github_login"] == "alice" }
+      assert alice.key?("teams")
+      assert alice.key?("visible")
+      assert alice.key?("source")
+      assert_kind_of Array, alice["teams"]
+
+      # Alice is on backend and frontend teams (via fixtures)
+      team_names = alice["teams"].map { |t| t["name"] }
+      assert_includes team_names, "Backend"
+      assert_includes team_names, "Frontend"
+    end
+
+    test "managed returns developers sorted by github_login" do
+      sign_in_as(role: :owner)
+
+      get "/api/developers/managed"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      logins = json["developers"].map { |d| d["github_login"] }
+      assert_equal logins.sort, logins
+    end
+
+    test "managed returns 403 for non-owner" do
+      sign_in_as(role: :developer)
+
+      get "/api/developers/managed"
+
+      assert_response :forbidden
+    end
+
+    test "managed returns 401 for unauthenticated user" do
+      reset!  # Clear session from setup
+
+      get "/api/developers/managed"
+
+      assert_response :unauthorized
+    end
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PATCH /api/developers/:id (owner-only)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    test "update toggles developer visibility for owner" do
+      sign_in_as(role: :owner)
+      dev = developers(:alice_dev)
+      assert dev.visible
+
+      patch "/api/developers/#{dev.id}", params: { visible: false }
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      assert_equal false, json["developer"]["visible"]
+
+      dev.reload
+      assert_not dev.visible
+    end
+
+    test "update can make hidden developer visible" do
+      sign_in_as(role: :owner)
+      dev = developers(:hidden_dev)
+      assert_not dev.visible
+
+      patch "/api/developers/#{dev.id}", params: { visible: true }
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      assert_equal true, json["developer"]["visible"]
+
+      dev.reload
+      assert dev.visible
+    end
+
+    test "update returns 403 for non-owner" do
+      sign_in_as(role: :developer)
+      dev = developers(:alice_dev)
+
+      patch "/api/developers/#{dev.id}", params: { visible: false }
+
+      assert_response :forbidden
+    end
+
+    test "update returns 404 for non-existent developer" do
+      sign_in_as(role: :owner)
+
+      patch "/api/developers/999999", params: { visible: false }
+
+      assert_response :not_found
+    end
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # POST /api/developers/sync (owner-only)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    test "sync triggers github sync and returns summary for owner" do
+      sign_in_as(role: :owner)
+
+      # Temporarily override GithubSyncService.new to return a stub
+      mock_result = { members_synced: 5, teams_synced: 2, external_detected: 1 }
+      original_new = GithubSyncService.method(:new)
+      GithubSyncService.define_singleton_method(:new) do |**_args|
+        service = Object.new
+        service.define_singleton_method(:sync_all) { mock_result }
+        service
+      end
+
+      post "/api/developers/sync"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      assert json["success"]
+      assert_equal 5, json["members_synced"]
+      assert_equal 2, json["teams_synced"]
+      assert_equal 1, json["external_detected"]
+    ensure
+      GithubSyncService.define_singleton_method(:new, original_new)
+    end
+
+    test "sync returns 403 for non-owner" do
+      sign_in_as(role: :developer)
+
+      post "/api/developers/sync"
+
+      assert_response :forbidden
+    end
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # GET /api/developers/:name/history (existing endpoint)
     # ═══════════════════════════════════════════════════════════════════════════
 
@@ -172,6 +319,15 @@ module Api
 
       team_dates = team_history.map { |s| Date.parse(s["start_date"]) }
       assert_equal team_dates.sort, team_dates, "Team history should be in chronological order"
+    end
+
+    private
+
+    # Simple stub for GithubSyncService that returns a canned result
+    def stub_sync_service(result)
+      service = Object.new
+      service.define_singleton_method(:sync_all) { result }
+      service
     end
   end
 end
