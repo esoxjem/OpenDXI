@@ -63,7 +63,13 @@ export interface SprintListResponse {
 }
 
 /** Sort options for the leaderboard */
-export type SortKey = "dxi_score" | "commits" | "prs_opened" | "reviews_given";
+export type SortKey =
+  | "dxi_score"
+  | "review_speed"
+  | "cycle_time"
+  | "pr_size"
+  | "review_coverage"
+  | "commit_frequency";
 
 /** Application configuration from backend */
 export interface ConfigResponse {
