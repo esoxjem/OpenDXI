@@ -60,4 +60,7 @@ end
 group :test do
   # HTTP request stubbing for testing external APIs
   gem "webmock", "~> 3.0"
+
+  # Minitest mocking and stubbing (extracted from minitest 6+)
+  gem "minitest-mock"
 end

@@ -9,6 +9,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  apiRequest,
   fetchConfig,
   fetchDeveloperHistory,
   fetchMetrics,
@@ -16,8 +17,6 @@ import {
   fetchSprints,
 } from "@/lib/api";
 import type { MetricsResponse, SprintListResponse, SprintHistoryResponse, ConfigResponse, DeveloperHistoryResponse, SprintHistoryEntry } from "@/types/metrics";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 /**
  * Hook to fetch application configuration.
@@ -120,11 +119,7 @@ export function useTeams() {
   return useQuery<TeamListItem[]>({
     queryKey: ["teams"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/teams`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch teams");
-      const data = await res.json();
+      const data = await apiRequest<{ teams: TeamListItem[] }>("/api/teams");
       return data.teams;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes

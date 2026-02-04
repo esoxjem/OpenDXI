@@ -201,7 +201,7 @@ module Api
       dev = developers(:alice_dev)
       assert dev.visible
 
-      patch "/api/developers/#{dev.id}", params: { visible: false }
+      patch "/api/developers/#{dev.id}", params: { developer: { visible: false } }
 
       assert_response :success
       json = JSON.parse(response.body)
@@ -216,7 +216,7 @@ module Api
       dev = developers(:hidden_dev)
       assert_not dev.visible
 
-      patch "/api/developers/#{dev.id}", params: { visible: true }
+      patch "/api/developers/#{dev.id}", params: { developer: { visible: true } }
 
       assert_response :success
       json = JSON.parse(response.body)
@@ -230,7 +230,7 @@ module Api
       sign_in_as(role: :developer)
       dev = developers(:alice_dev)
 
-      patch "/api/developers/#{dev.id}", params: { visible: false }
+      patch "/api/developers/#{dev.id}", params: { developer: { visible: false } }
 
       assert_response :forbidden
     end
@@ -238,7 +238,7 @@ module Api
     test "update returns 404 for non-existent developer" do
       sign_in_as(role: :owner)
 
-      patch "/api/developers/999999", params: { visible: false }
+      patch "/api/developers/999999", params: { developer: { visible: false } }
 
       assert_response :not_found
     end
@@ -250,16 +250,13 @@ module Api
     test "sync triggers github sync and returns summary for owner" do
       sign_in_as(role: :owner)
 
-      # Temporarily override GithubSyncService.new to return a stub
       mock_result = { members_synced: 5, teams_synced: 2, external_detected: 1 }
-      original_new = GithubSyncService.method(:new)
-      GithubSyncService.define_singleton_method(:new) do |**_args|
-        service = Object.new
-        service.define_singleton_method(:sync_all) { mock_result }
-        service
-      end
+      mock_service = Minitest::Mock.new
+      mock_service.expect(:sync_all, mock_result)
 
-      post "/api/developers/sync"
+      GithubSyncService.stub(:new, mock_service) do
+        post "/api/developers/sync"
+      end
 
       assert_response :success
       json = JSON.parse(response.body)
@@ -267,8 +264,8 @@ module Api
       assert_equal 5, json["members_synced"]
       assert_equal 2, json["teams_synced"]
       assert_equal 1, json["external_detected"]
-    ensure
-      GithubSyncService.define_singleton_method(:new, original_new)
+
+      mock_service.verify
     end
 
     test "sync returns 403 for non-owner" do
@@ -321,13 +318,5 @@ module Api
       assert_equal team_dates.sort, team_dates, "Team history should be in chronological order"
     end
 
-    private
-
-    # Simple stub for GithubSyncService that returns a canned result
-    def stub_sync_service(result)
-      service = Object.new
-      service.define_singleton_method(:sync_all) { result }
-      service
-    end
   end
 end

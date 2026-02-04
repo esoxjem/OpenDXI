@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 # Syncs GitHub org members and teams into the local database.
 #
 # Responsibilities:
@@ -125,12 +127,14 @@ class GithubSyncService
     developers = Developer.where(github_id: member_github_ids)
     developer_ids = developers.pluck(:id)
 
-    # Replace all memberships for this team
-    TeamMembership.where(team: team).where.not(developer_id: developer_ids).delete_all
-    developer_ids.each do |dev_id|
-      TeamMembership.find_or_create_by!(team: team, developer_id: dev_id)
-    rescue ActiveRecord::RecordNotUnique
-      # Already exists
+    # Atomically update memberships: remove stale, add missing
+    ActiveRecord::Base.transaction do
+      TeamMembership.where(team: team).where.not(developer_id: developer_ids).delete_all
+      developer_ids.each do |dev_id|
+        TeamMembership.find_or_create_by!(team: team, developer_id: dev_id)
+      rescue ActiveRecord::RecordNotUnique
+        # Already exists
+      end
     end
   end
 
@@ -142,9 +146,9 @@ class GithubSyncService
   end
 
   # Generate a deterministic pseudo-ID for external contributors.
-  # Uses a negative hash to avoid conflicts with real GitHub IDs.
+  # Uses SHA256 for determinism (Ruby's String#hash is randomized per process).
+  # The 9B offset avoids collisions with real GitHub IDs (which are much smaller).
   def generate_external_id(login)
-    # Use a large offset + hash to create a unique ID that won't collide with real GitHub IDs
-    (login.hash.abs % 1_000_000_000) + 9_000_000_000
+    Digest::SHA256.hexdigest(login).to_i(16) % 1_000_000_000 + 9_000_000_000
   end
 end

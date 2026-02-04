@@ -10,14 +10,15 @@
 #   - Part of DeveloperHistorySerializer (team comparison)
 class SprintHistorySerializer
   include DimensionScoreSerializable
+  include DeveloperFilterable
 
   # @param sprint [Sprint] the sprint to serialize
   # @param visible_logins [Array<String>, nil] if set, only include these logins
   # @param team_logins [Array<String>, nil] if set, only include these logins
   def initialize(sprint, visible_logins: nil, team_logins: nil)
     @sprint = sprint
-    @visible_logins = visible_logins
-    @team_logins = team_logins
+    @visible_logins = visible_logins.present? ? Set.new(visible_logins) : nil
+    @team_logins = team_logins.present? ? Set.new(team_logins) : nil
   end
 
   def as_json
@@ -46,22 +47,5 @@ class SprintHistorySerializer
         total_prs: summary["total_prs"] || 0
       }
     end
-  end
-
-  private
-
-  def filtering?
-    @visible_logins.present? || @team_logins.present?
-  end
-
-  def filtered_developers
-    devs = @sprint.developers
-    devs = devs.select { |d| developer_login(d).in?(@visible_logins) } if @visible_logins.present?
-    devs = devs.select { |d| developer_login(d).in?(@team_logins) } if @team_logins.present?
-    devs
-  end
-
-  def developer_login(dev)
-    dev["github_login"] || dev["developer"]
   end
 end

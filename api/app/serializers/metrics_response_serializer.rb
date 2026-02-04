@@ -12,6 +12,7 @@
 #   - `github_login` -> `developer` (developer identifier)
 class MetricsResponseSerializer
   include DimensionScoreSerializable
+  include DeveloperFilterable
 
   # @param sprint [Sprint] the sprint to serialize
   # @param visible_logins [Array<String>, nil] if set, only include these logins
@@ -19,8 +20,8 @@ class MetricsResponseSerializer
   # @param team_name [String, nil] team name for filter_meta display
   def initialize(sprint, visible_logins: nil, team_logins: nil, team_name: nil)
     @sprint = sprint
-    @visible_logins = visible_logins
-    @team_logins = team_logins
+    @visible_logins = visible_logins.present? ? Set.new(visible_logins) : nil
+    @team_logins = team_logins.present? ? Set.new(team_logins) : nil
     @team_name = team_name
   end
 
@@ -40,21 +41,6 @@ class MetricsResponseSerializer
   end
 
   private
-
-  def filtering?
-    @visible_logins.present? || @team_logins.present?
-  end
-
-  def filtered_developers
-    devs = @sprint.developers
-    devs = devs.select { |d| developer_login(d).in?(@visible_logins) } if @visible_logins.present?
-    devs = devs.select { |d| developer_login(d).in?(@team_logins) } if @team_logins.present?
-    devs
-  end
-
-  def developer_login(dev)
-    dev["github_login"] || dev["developer"]
-  end
 
   def serialize_developer(dev)
     {

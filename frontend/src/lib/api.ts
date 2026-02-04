@@ -50,7 +50,7 @@ export function getLoginUrl(): string {
   return `${API_BASE}/auth/github`;
 }
 
-async function apiRequest<T>(endpoint: string): Promise<T> {
+export async function apiRequest<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     credentials: "include",
   });

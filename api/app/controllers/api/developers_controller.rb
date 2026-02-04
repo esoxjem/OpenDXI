@@ -44,7 +44,7 @@ module Api
     # Owner-only.
     def update
       developer = Developer.find(params[:id])
-      developer.update!(visible: params[:visible])
+      developer.update!(visible: developer_params[:visible])
 
       render json: { developer: serialize_developer(developer) }
     end
@@ -85,6 +85,10 @@ module Api
     end
 
     private
+
+    def developer_params
+      params.require(:developer).permit(:visible)
+    end
 
     def serialize_developer(dev)
       {

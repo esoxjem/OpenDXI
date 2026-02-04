@@ -6,7 +6,7 @@
 # All other actions require owner role.
 module Api
   class TeamsController < BaseController
-    before_action :require_owner!, except: [:index]
+    before_action :require_owner!, except: [:index, :show]
 
     # GET /api/teams
     #
@@ -20,17 +20,27 @@ module Api
       }
     end
 
+    # GET /api/teams/:id
+    #
+    # Returns a single team with its members.
+    # Available to all authenticated users.
+    def show
+      team = Team.includes(:developers).find(params[:id])
+
+      render json: { team: serialize_team(team) }
+    end
+
     # POST /api/teams
     #
     # Creates a custom team. Owner-only.
     def create
       team = Team.new(
-        name: params[:name],
+        name: team_params[:name],
         source: "custom"
       )
 
-      if params[:developer_ids].present?
-        team.developer_ids = Array(params[:developer_ids]).map(&:to_i)
+      if team_params[:developer_ids].present?
+        team.developer_ids = Array(team_params[:developer_ids]).map(&:to_i)
       end
 
       team.save!
@@ -51,14 +61,14 @@ module Api
       team = Team.find(params[:id])
 
       # Mark GitHub-imported team as diverged when editing membership
-      if team.source == "github" && params[:developer_ids].present?
-        team.synced = false
+      if team_params[:developer_ids].present?
+        team.synced = false if team.source == "github"
       end
 
-      team.name = params[:name] if params[:name].present?
+      team.name = team_params[:name] if team_params[:name].present?
 
-      if params[:developer_ids].present?
-        team.developer_ids = Array(params[:developer_ids]).map(&:to_i)
+      if team_params[:developer_ids].present?
+        team.developer_ids = Array(team_params[:developer_ids]).map(&:to_i)
       end
 
       team.save!
@@ -79,6 +89,10 @@ module Api
     end
 
     private
+
+    def team_params
+      params.require(:team).permit(:name, developer_ids: [])
+    end
 
     def serialize_team(team)
       {

@@ -13,7 +13,7 @@ class Team < ApplicationRecord
   has_many :team_memberships, dependent: :destroy
   has_many :developers, through: :team_memberships
 
-  validates :name, presence: true
+  validates :name, presence: true, length: { maximum: 100 }
   validates :slug, presence: true, uniqueness: true
   validates :source, inclusion: { in: %w[github custom] }
 
