@@ -47,7 +47,7 @@ export function LeaderboardSkeleton() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <Skeleton className="h-6 w-40" />
         <div className="flex gap-1">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} className="h-8 w-16" />
           ))}
         </div>

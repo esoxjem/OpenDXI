@@ -1,3 +1,5 @@
+import type { SortKey } from "@/types/metrics";
+
 /**
  * DXI Dimension Configuration
  *
@@ -156,15 +158,15 @@ export const DIMENSION_CONFIGS = {
 } as const;
 
 /** Leaderboard column tooltip definitions */
-export const LEADERBOARD_TOOLTIPS = {
+export const LEADERBOARD_TOOLTIPS: Record<SortKey, string> = {
   dxi_score:
     "Developer Experience Index — a composite score (0-100) measuring code velocity and collaboration. 70+ is good, 50-70 moderate, <50 needs improvement.",
-  commits: "Total commits pushed during this sprint.",
-  prs: "Pull requests merged out of total opened (merged/opened).",
-  reviews: "Code reviews given to teammates during this sprint.",
-  cycle_time: "Average time from PR creation to merge. Lower is better.",
-  lines_changed: "Total lines added plus deleted across all PRs.",
-} as const;
+  review_speed: DIMENSION_CONFIGS.review_speed.tooltip,
+  cycle_time: DIMENSION_CONFIGS.cycle_time.tooltip,
+  pr_size: DIMENSION_CONFIGS.pr_size.tooltip,
+  review_coverage: DIMENSION_CONFIGS.review_coverage.tooltip,
+  commit_frequency: DIMENSION_CONFIGS.commit_frequency.tooltip,
+};
 
 /** Get the appropriate score color class based on score value */
 export function getScoreColorClass(score: number): string {
