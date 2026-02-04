@@ -55,6 +55,24 @@ function getScoreValue(dev: DeveloperMetrics, key: SortKey): number {
   return dev.dimension_scores[key] ?? 0;
 }
 
+/** Extract the raw value for a dimension from a developer's metrics */
+function getRawValue(dev: DeveloperMetrics, key: keyof DimensionScores): number | null {
+  switch (key) {
+    case "review_speed":
+      return dev.avg_review_time_hours;
+    case "cycle_time":
+      return dev.avg_cycle_time_hours;
+    case "pr_size":
+      return dev.prs_opened > 0
+        ? (dev.lines_added + dev.lines_deleted) / dev.prs_opened
+        : null;
+    case "review_coverage":
+      return dev.reviews_given;
+    case "commit_frequency":
+      return dev.commits;
+  }
+}
+
 export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>("dxi_score");
   const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
@@ -138,10 +156,11 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
           </TableHeader>
           <TableBody>
             <AnimatePresence mode="popLayout">
-              {sortedDevelopers.map((dev, index) => {
+              {sortedDevelopers.flatMap((dev, index) => {
                 const isExpanded = expandedDeveloper === dev.developer;
+                const lines = dev.lines_added + dev.lines_deleted;
 
-                return (
+                const rows = [
                   <motion.tr
                     key={dev.developer}
                     layout
@@ -178,79 +197,38 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
                         key={key}
                         className={`text-center tabular-nums ${getScoreColorClass(dev.dimension_scores[key])}`}
                       >
-                        {Math.round(dev.dimension_scores[key])}
+                        {DIMENSION_CONFIGS[key].formatRawValue(getRawValue(dev, key))}
                       </TableCell>
                     ))}
-                  </motion.tr>
-                );
-              })}
-            </AnimatePresence>
+                  </motion.tr>,
+                ];
 
-            {/* Expanded detail row — rendered outside AnimatePresence to avoid layout conflicts */}
-            {expandedDeveloper && (() => {
-              const dev = sortedDevelopers.find(
-                (d) => d.developer === expandedDeveloper
-              );
-              if (!dev) return null;
-
-              const cycleTime = dev.avg_cycle_time_hours;
-              const reviewTime = dev.avg_review_time_hours;
-              const lines = dev.lines_added + dev.lines_deleted;
-
-              return (
-                <AnimatePresence>
-                  <motion.tr
-                    key={`${dev.developer}-detail`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                    className="border-b"
-                  >
-                    <TableCell colSpan={8} className="bg-muted/30 px-6 py-3">
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                        className="overflow-hidden"
-                      >
+                if (isExpanded) {
+                  rows.push(
+                    <tr key={`${dev.developer}-detail`} className="border-b bg-muted/30">
+                      <td colSpan={8} className="px-6 py-3">
                         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
                           <ChevronRight className="h-3 w-3" />
-                          <span className="font-medium uppercase tracking-wide">Raw Activity</span>
+                          <span className="font-medium uppercase tracking-wide">Additional Metrics</span>
                         </div>
                         <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
                           <div>
-                            <span className="font-medium text-foreground/80">Commits:</span>{" "}
-                            {dev.commits}
-                          </div>
-                          <div>
                             <span className="font-medium text-foreground/80">PRs:</span>{" "}
-                            {dev.prs_merged}/{dev.prs_opened}
-                          </div>
-                          <div>
-                            <span className="font-medium text-foreground/80">Reviews:</span>{" "}
-                            {dev.reviews_given}
-                          </div>
-                          <div>
-                            <span className="font-medium text-foreground/80">Cycle Time:</span>{" "}
-                            {cycleTime ? `${cycleTime.toFixed(1)}h` : "\u2014"}
+                            {dev.prs_merged}/{dev.prs_opened} merged
                           </div>
                           <div>
                             <span className="font-medium text-foreground/80">Lines Changed:</span>{" "}
                             {lines.toLocaleString()}
                           </div>
-                          <div>
-                            <span className="font-medium text-foreground/80">Review Time:</span>{" "}
-                            {reviewTime ? `${reviewTime.toFixed(1)}h` : "\u2014"}
-                          </div>
                         </div>
-                      </motion.div>
-                    </TableCell>
-                  </motion.tr>
-                </AnimatePresence>
-              );
-            })()}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return rows;
+              })}
+            </AnimatePresence>
           </TableBody>
         </Table>
       </CardContent>
