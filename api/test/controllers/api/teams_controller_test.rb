@@ -78,6 +78,50 @@ module Api
     end
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # GET /api/teams/:id (available to all authenticated users)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    test "show returns a single team with developers" do
+      sign_in_as
+      team = teams(:backend)
+
+      get "/api/teams/#{team.id}"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      assert json.key?("team")
+      team_data = json["team"]
+      assert_equal "Backend", team_data["name"]
+      assert_equal "backend", team_data["slug"]
+      assert_equal "github", team_data["source"]
+      assert_equal true, team_data["synced"]
+      assert_equal 2, team_data["developer_count"]
+
+      dev_logins = team_data["developers"].map { |d| d["github_login"] }
+      assert_includes dev_logins, "alice"
+      assert_includes dev_logins, "bob"
+    end
+
+    test "show returns 404 for non-existent team" do
+      sign_in_as
+
+      get "/api/teams/999999"
+
+      assert_response :not_found
+      json = JSON.parse(response.body)
+      assert_equal "not_found", json["error"]
+    end
+
+    test "show returns 401 for unauthenticated user" do
+      team = teams(:backend)
+
+      get "/api/teams/#{team.id}"
+
+      assert_response :unauthorized
+    end
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # POST /api/teams (owner-only)
     # ═══════════════════════════════════════════════════════════════════════════
 
@@ -86,7 +130,7 @@ module Api
 
       assert_difference "Team.count", 1 do
         post "/api/teams", params: {
-          name: "New Custom Team"
+          team: { name: "New Custom Team" }
         }
       end
 
@@ -104,8 +148,7 @@ module Api
       bob = developers(:bob_dev)
 
       post "/api/teams", params: {
-        name: "Cross-Functional",
-        developer_ids: [alice.id, bob.id]
+        team: { name: "Cross-Functional", developer_ids: [alice.id, bob.id] }
       }
 
       assert_response :created
@@ -120,7 +163,7 @@ module Api
     test "create returns 422 for missing name" do
       sign_in_as(role: :owner)
 
-      post "/api/teams", params: { name: "" }
+      post "/api/teams", params: { team: { name: "" } }
 
       assert_response :unprocessable_entity
       json = JSON.parse(response.body)
@@ -131,7 +174,7 @@ module Api
       sign_in_as(role: :owner)
 
       # "Backend" already exists as a fixture, so its slug "backend" is taken
-      post "/api/teams", params: { name: "Backend" }
+      post "/api/teams", params: { team: { name: "Backend" } }
 
       assert_response :unprocessable_entity
       json = JSON.parse(response.body)
@@ -141,7 +184,7 @@ module Api
     test "create returns 403 for non-owner" do
       sign_in_as(role: :developer)
 
-      post "/api/teams", params: { name: "Unauthorized Team" }
+      post "/api/teams", params: { team: { name: "Unauthorized Team" } }
 
       assert_response :forbidden
     end
@@ -154,7 +197,7 @@ module Api
       sign_in_as(role: :owner)
       team = teams(:frontend_team)
 
-      patch "/api/teams/#{team.id}", params: { name: "Frontend Revised" }
+      patch "/api/teams/#{team.id}", params: { team: { name: "Frontend Revised" } }
 
       assert_response :success
       json = JSON.parse(response.body)
@@ -171,7 +214,7 @@ module Api
       bob = developers(:bob_dev)
 
       patch "/api/teams/#{team.id}", params: {
-        developer_ids: [charlie.id, bob.id]
+        team: { developer_ids: [charlie.id, bob.id] }
       }
 
       assert_response :success
@@ -186,7 +229,7 @@ module Api
       assert_equal "github", team.source
 
       patch "/api/teams/#{team.id}", params: {
-        developer_ids: [developers(:alice_dev).id]
+        team: { developer_ids: [developers(:alice_dev).id] }
       }
 
       assert_response :success
@@ -200,7 +243,7 @@ module Api
       assert_equal "custom", team.source
 
       patch "/api/teams/#{team.id}", params: {
-        developer_ids: [developers(:bob_dev).id]
+        team: { developer_ids: [developers(:bob_dev).id] }
       }
 
       assert_response :success
@@ -212,7 +255,7 @@ module Api
       sign_in_as(role: :developer)
       team = teams(:frontend_team)
 
-      patch "/api/teams/#{team.id}", params: { name: "Hacked" }
+      patch "/api/teams/#{team.id}", params: { team: { name: "Hacked" } }
 
       assert_response :forbidden
     end
@@ -220,7 +263,7 @@ module Api
     test "update returns 404 for non-existent team" do
       sign_in_as(role: :owner)
 
-      patch "/api/teams/999999", params: { name: "Ghost" }
+      patch "/api/teams/999999", params: { team: { name: "Ghost" } }
 
       assert_response :not_found
     end

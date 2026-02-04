@@ -18,6 +18,18 @@ class TeamTest < ActiveSupport::TestCase
     assert_includes team.errors[:name], "can't be blank"
   end
 
+  test "rejects name longer than 100 characters" do
+    team = Team.new(name: "a" * 101)
+    assert_not team.valid?
+    assert_includes team.errors[:name], "is too long (maximum is 100 characters)"
+  end
+
+  test "accepts name of exactly 100 characters" do
+    team = Team.new(name: "a" * 100)
+    team.valid?
+    assert_not_includes team.errors[:name], "is too long (maximum is 100 characters)"
+  end
+
   test "requires slug" do
     team = Team.new(name: "Test")
     # slug is auto-generated, so creating without explicit slug should still be valid
