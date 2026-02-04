@@ -1,0 +1,22 @@
+# Test fixtures for Team model
+
+backend:
+  name: Backend
+  slug: backend
+  source: github
+  github_team_id: 1001
+  synced: true
+
+frontend_team:
+  name: Frontend
+  slug: frontend
+  source: custom
+  github_team_id:
+  synced: true
+
+diverged_team:
+  name: Platform
+  slug: platform
+  source: github
+  github_team_id: 1002
+  synced: false

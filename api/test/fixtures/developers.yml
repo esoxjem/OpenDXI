@@ -1,0 +1,33 @@
+# Test fixtures for Developer model
+
+alice_dev:
+  github_id: 200001
+  github_login: alice
+  name: Alice Developer
+  avatar_url: https://github.com/alice.png
+  visible: true
+  source: org_member
+
+bob_dev:
+  github_id: 200002
+  github_login: bob
+  name: Bob Owner
+  avatar_url: https://github.com/bob.png
+  visible: true
+  source: org_member
+
+charlie_dev:
+  github_id: 200003
+  github_login: charlie
+  name: Charlie External
+  avatar_url: https://github.com/charlie.png
+  visible: true
+  source: external
+
+hidden_dev:
+  github_id: 200004
+  github_login: hidden-user
+  name: Hidden User
+  avatar_url: https://github.com/hidden-user.png
+  visible: false
+  source: org_member
