@@ -369,7 +369,8 @@ export default function SettingsPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch teams");
-      return res.json() as Promise<TeamsResponse>;
+      const data: TeamsResponse = await res.json();
+      return data.teams;
     },
     enabled: user?.role === "owner",
   });
@@ -767,9 +768,9 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold">Teams</h2>
-            {(teamsData?.teams.length ?? 0) > 0 && (
+            {(teamsData?.length ?? 0) > 0 && (
               <p className="text-sm text-muted-foreground">
-                {teamsData?.teams.length} team{teamsData?.teams.length !== 1 ? "s" : ""}
+                {teamsData?.length} team{teamsData?.length !== 1 ? "s" : ""}
               </p>
             )}
           </div>
@@ -896,7 +897,7 @@ export default function SettingsPage() {
           <p className="text-destructive">
             Failed to load teams. Please try again.
           </p>
-        ) : (teamsData?.teams.length ?? 0) === 0 ? (
+        ) : (teamsData?.length ?? 0) === 0 ? (
           <div className="border rounded-lg p-8 text-center text-muted-foreground">
             <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="mb-2">No teams yet.</p>
@@ -906,7 +907,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="border rounded-lg divide-y">
-            {teamsData?.teams.map((team) => {
+            {teamsData?.map((team) => {
               const isExpanded = expandedTeamId === team.id;
               const isEditing = editingTeamId === team.id;
 
