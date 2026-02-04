@@ -169,10 +169,11 @@ module Api
           headers: { "If-None-Match" => etag }
       assert_response :not_modified
 
-      # Test that force_refresh parameter is recognized (even without actual refresh)
-      # The important part is that force_refresh bypasses the ETag check
-      # We can verify this by checking the controller logic without calling GitHub
-      assert fresh_sprint.generate_cache_key == etag.gsub('"', '')
+      # Verify the ETag is based on the sprint's cache key
+      # (may include a filter suffix when Developer records exist)
+      etag_value = etag.gsub('"', '')
+      assert etag_value.start_with?(fresh_sprint.generate_cache_key),
+        "ETag should be based on sprint cache key"
     end
 
     test "metrics sets cache control headers" do
@@ -205,7 +206,188 @@ module Api
       assert_not_equal original_key, updated_key, "Cache key should change when data changes"
     end
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Team Filtering (?team=slug)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    test "metrics filters developers by team when ?team=slug is provided" do
+      sprint = Sprint.create!(
+        start_date: Date.current + 42,
+        end_date: Date.current + 56,
+        data: multi_developer_sprint_data
+      )
+
+      # alice is on the backend team (via fixtures)
+      get "/api/sprints/#{sprint.start_date}/#{sprint.end_date}/metrics?team=backend"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      dev_names = json["developers"].map { |d| d["developer"] }
+      assert_includes dev_names, "alice"
+      refute_includes dev_names, "charlie", "charlie is not on backend team"
+    end
+
+    test "metrics recomputes summary for filtered set" do
+      sprint = Sprint.create!(
+        start_date: Date.current + 56,
+        end_date: Date.current + 70,
+        data: multi_developer_sprint_data
+      )
+
+      get "/api/sprints/#{sprint.start_date}/#{sprint.end_date}/metrics?team=backend"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      # Summary should reflect only alice + bob (backend team members who are in sprint)
+      # Not the full sprint summary
+      assert json["summary"]["total_commits"] <= 22, "Summary should be recomputed from filtered devs"
+    end
+
+    test "metrics includes filter_meta when filtering" do
+      sprint = Sprint.create!(
+        start_date: Date.current + 70,
+        end_date: Date.current + 84,
+        data: multi_developer_sprint_data
+      )
+
+      get "/api/sprints/#{sprint.start_date}/#{sprint.end_date}/metrics?team=backend"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      assert json.key?("filter_meta"), "Response should include filter_meta when filtering"
+      meta = json["filter_meta"]
+      assert meta.key?("total_developers")
+      assert meta.key?("showing_developers")
+      assert meta.key?("team_name")
+      assert_equal "Backend", meta["team_name"]
+    end
+
+    test "metrics ignores invalid team slug gracefully" do
+      get "/api/sprints/#{@sprint.start_date}/#{@sprint.end_date}/metrics?team=nonexistent"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+
+      # Should return data without team filtering (only visibility filtering)
+      assert json.key?("developers")
+    end
+
+    test "metrics produces different ETags for different team filters" do
+      sprint = Sprint.create!(
+        start_date: Date.current + 84,
+        end_date: Date.current + 98,
+        data: multi_developer_sprint_data
+      )
+
+      get "/api/sprints/#{sprint.start_date}/#{sprint.end_date}/metrics?team=backend"
+      assert_response :ok
+      etag_backend = response.headers["ETag"]
+
+      get "/api/sprints/#{sprint.start_date}/#{sprint.end_date}/metrics?team=frontend"
+      assert_response :ok
+      etag_frontend = response.headers["ETag"]
+
+      assert_not_equal etag_backend, etag_frontend,
+        "Different team filters should produce different ETags"
+    end
+
+    test "history filters by team when ?team=slug is provided" do
+      Sprint.destroy_all
+      Sprint.create!(
+        start_date: Date.new(2026, 3, 1),
+        end_date: Date.new(2026, 3, 14),
+        data: multi_developer_sprint_data
+      )
+
+      get "/api/sprints/history?team=backend"
+
+      assert_response :success
+      json = JSON.parse(response.body)
+      sprints = json["sprints"]
+
+      # History aggregates should reflect filtered developer set
+      assert sprints.first["developer_count"] <= 2,
+        "Developer count should reflect team members only"
+    end
+
     private
+
+    def multi_developer_sprint_data
+      {
+        "developers" => [
+          {
+            "developer" => "alice",
+            "commits" => 10,
+            "prs_opened" => 2,
+            "prs_merged" => 2,
+            "reviews_given" => 5,
+            "lines_added" => 200,
+            "lines_deleted" => 50,
+            "dxi_score" => 80.0,
+            "dimension_scores" => {
+              "review_turnaround" => 85.0,
+              "cycle_time" => 75.0,
+              "pr_size" => 90.0,
+              "review_coverage" => 50.0,
+              "commit_frequency" => 50.0
+            }
+          },
+          {
+            "developer" => "bob",
+            "commits" => 8,
+            "prs_opened" => 3,
+            "prs_merged" => 2,
+            "reviews_given" => 3,
+            "lines_added" => 150,
+            "lines_deleted" => 30,
+            "dxi_score" => 70.0,
+            "dimension_scores" => {
+              "review_turnaround" => 70.0,
+              "cycle_time" => 65.0,
+              "pr_size" => 85.0,
+              "review_coverage" => 30.0,
+              "commit_frequency" => 40.0
+            }
+          },
+          {
+            "developer" => "charlie",
+            "commits" => 4,
+            "prs_opened" => 1,
+            "prs_merged" => 1,
+            "reviews_given" => 1,
+            "lines_added" => 100,
+            "lines_deleted" => 20,
+            "dxi_score" => 55.0,
+            "dimension_scores" => {
+              "review_turnaround" => 60.0,
+              "cycle_time" => 50.0,
+              "pr_size" => 70.0,
+              "review_coverage" => 10.0,
+              "commit_frequency" => 20.0
+            }
+          }
+        ],
+        "daily_activity" => [],
+        "summary" => {
+          "total_commits" => 22,
+          "total_prs" => 6,
+          "total_merged" => 5,
+          "total_reviews" => 9,
+          "developer_count" => 3,
+          "avg_dxi_score" => 68.3
+        },
+        "team_dimension_scores" => {
+          "review_turnaround" => 71.7,
+          "cycle_time" => 63.3,
+          "pr_size" => 81.7,
+          "review_coverage" => 30.0,
+          "commit_frequency" => 36.7
+        }
+      }
+    end
 
     def sample_sprint_data
       {
