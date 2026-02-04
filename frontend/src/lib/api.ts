@@ -84,15 +84,19 @@ export async function fetchSprints(): Promise<Sprint[]> {
  * @param startDate - Sprint start date (YYYY-MM-DD)
  * @param endDate - Sprint end date (YYYY-MM-DD)
  * @param forceRefresh - Bypass cache and fetch fresh data
+ * @param team - Optional team slug to filter by
  */
 export async function fetchMetrics(
   startDate: string,
   endDate: string,
-  forceRefresh = false
+  forceRefresh = false,
+  team?: string
 ): Promise<MetricsResponse> {
-  const endpoint = forceRefresh
-    ? `/api/sprints/${startDate}/${endDate}/metrics?force_refresh=true`
-    : `/api/sprints/${startDate}/${endDate}/metrics`;
+  const params = new URLSearchParams();
+  if (forceRefresh) params.set("force_refresh", "true");
+  if (team) params.set("team", team);
+  const qs = params.toString();
+  const endpoint = `/api/sprints/${startDate}/${endDate}/metrics${qs ? `?${qs}` : ""}`;
   return apiRequest<MetricsResponse>(endpoint);
 }
 
@@ -100,9 +104,12 @@ export async function fetchMetrics(
  * Fetch historical DXI scores across multiple sprints.
  *
  * @param count - Number of sprints to include (default 6)
+ * @param team - Optional team slug to filter by
  */
-export async function fetchSprintHistory(count = 6): Promise<SprintHistoryEntry[]> {
-  const data = await apiRequest<SprintHistoryResponse>(`/api/sprints/history?count=${count}`);
+export async function fetchSprintHistory(count = 6, team?: string): Promise<SprintHistoryEntry[]> {
+  const params = new URLSearchParams({ count: count.toString() });
+  if (team) params.set("team", team);
+  const data = await apiRequest<SprintHistoryResponse>(`/api/sprints/history?${params.toString()}`);
   return data.sprints;
 }
 

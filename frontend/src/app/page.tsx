@@ -16,6 +16,7 @@ import {
   useMetrics,
   useRefreshMetrics,
   useSprintHistory,
+  useTeams,
 } from "@/hooks/useMetrics";
 import type { MetricsResponse } from "@/types/metrics";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +30,8 @@ import { LoadingMessage } from "@/components/ui/loading-message";
 import { DeveloperCard } from "@/components/dashboard/DeveloperCard";
 import { DeveloperDetailView } from "@/components/dashboard/DeveloperDetailView";
 import { DxiTrendChart } from "@/components/dashboard/DxiTrendChart";
+import { TeamFilter } from "@/components/dashboard/TeamFilter";
+import { FilterMetaBanner } from "@/components/dashboard/FilterMetaBanner";
 import { UserMenu } from "@/components/layout/UserMenu";
 
 function DashboardContent() {
@@ -40,6 +43,7 @@ function DashboardContent() {
   const sprintParam = searchParams.get("sprint");
   const viewParam = searchParams.get("view") || "team";
   const developerParam = searchParams.get("developer");
+  const teamParam = searchParams.get("team");
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY - Rules of Hooks
@@ -49,6 +53,7 @@ function DashboardContent() {
 
   const { data: config } = useConfig();
   const { data: sprints, isLoading: sprintsLoading } = useSprints();
+  const { data: teams, isLoading: teamsLoading } = useTeams();
   const refreshMutation = useRefreshMetrics();
 
   // Use URL param or default to first (current) sprint
@@ -63,9 +68,9 @@ function DashboardContent() {
     isLoading: metricsLoading,
     isFetching: metricsFetching,
     error,
-  } = useMetrics(startDate, endDate);
+  } = useMetrics(startDate, endDate, teamParam || undefined);
   const { data: sprintHistory, isLoading: historyLoading } =
-    useSprintHistory(6);
+    useSprintHistory(6, teamParam || undefined);
 
   // Calculate previous sprint metrics for trend indicators
   const previousSprintMetrics = useMemo(() => {
@@ -134,7 +139,7 @@ function DashboardContent() {
 
   const handleRefresh = () => {
     if (startDate && endDate) {
-      refreshMutation.mutate({ start: startDate, end: endDate });
+      refreshMutation.mutate({ start: startDate, end: endDate, team: teamParam || undefined });
     }
   };
 
@@ -148,6 +153,10 @@ function DashboardContent() {
 
   const handleBackFromDeveloper = () => {
     updateUrlParams({ developer: null });
+  };
+
+  const handleTeamChange = (slug: string | null) => {
+    updateUrlParams({ team: slug });
   };
 
   // Error state
@@ -281,6 +290,12 @@ function DashboardContent() {
               <span>Refreshing...</span>
             </div>
           )}
+          <TeamFilter
+            teams={teams}
+            value={teamParam}
+            onValueChange={handleTeamChange}
+            isLoading={teamsLoading}
+          />
           <SprintSelector
             sprints={sprints}
             value={selectedSprint}
@@ -307,6 +322,9 @@ function DashboardContent() {
           <UserMenu />
         </div>
       </div>
+
+      {/* Filter Meta Banner - shows when filtering is active */}
+      <FilterMetaBanner filterMeta={metrics?.filter_meta} />
 
       {/* Tabs */}
       <Tabs value={viewParam} onValueChange={handleViewChange}>
