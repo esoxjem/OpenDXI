@@ -1,3 +1,5 @@
+import type { SortKey } from "@/types/metrics";
+
 /**
  * DXI Dimension Configuration
  *
@@ -156,7 +158,7 @@ export const DIMENSION_CONFIGS = {
 } as const;
 
 /** Leaderboard column tooltip definitions */
-export const LEADERBOARD_TOOLTIPS: Record<string, string> = {
+export const LEADERBOARD_TOOLTIPS: Record<SortKey, string> = {
   dxi_score:
     "Developer Experience Index — a composite score (0-100) measuring code velocity and collaboration. 70+ is good, 50-70 moderate, <50 needs improvement.",
   review_speed: DIMENSION_CONFIGS.review_speed.tooltip,

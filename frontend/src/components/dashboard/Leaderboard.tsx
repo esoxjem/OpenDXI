@@ -17,7 +17,7 @@ import {
   ChevronDown,
   GitPullRequest,
   FileCode,
-  ArrowUpRight,
+  Plus,
 } from "lucide-react";
 import { ColumnTooltip } from "./components/ColumnTooltip";
 import {
@@ -25,6 +25,7 @@ import {
   LEADERBOARD_TOOLTIPS,
   getScoreColorClass,
 } from "./components/dimension-config";
+import { getRawValueForDimension } from "./components";
 import type {
   DeveloperMetrics,
   SortKey,
@@ -53,6 +54,9 @@ const dimensionColumns: { key: keyof DimensionScores; label: string }[] = [
   { key: "commit_frequency", label: DIMENSION_CONFIGS.commit_frequency.label },
 ];
 
+/** Total number of table columns: rank + developer + dxi + dimensions + chevron */
+const TOTAL_COLUMNS = 3 + dimensionColumns.length + 1;
+
 /** Returns a tailwind class string for the DXI score pill */
 function getDxiScoreClasses(score: number): string {
   if (score >= 70)
@@ -64,28 +68,12 @@ function getDxiScoreClasses(score: number): string {
 
 function getScoreValue(dev: DeveloperMetrics, key: SortKey): number {
   if (key === "dxi_score") return dev.dxi_score;
-  return dev.dimension_scores[key] ?? 0;
+  return dev.dimension_scores[key];
 }
 
-/** Extract the raw value for a dimension from a developer's metrics */
-function getRawValue(
-  dev: DeveloperMetrics,
-  key: keyof DimensionScores
-): number | null {
-  switch (key) {
-    case "review_speed":
-      return dev.avg_review_time_hours;
-    case "cycle_time":
-      return dev.avg_cycle_time_hours;
-    case "pr_size":
-      return dev.prs_opened > 0
-        ? (dev.lines_added + dev.lines_deleted) / dev.prs_opened
-        : null;
-    case "review_coverage":
-      return dev.reviews_given;
-    case "commit_frequency":
-      return dev.commits;
-  }
+function getSortLabel(key: SortKey): string {
+  if (key === "dxi_score") return "overall DXI score";
+  return DIMENSION_CONFIGS[key].label.toLowerCase();
 }
 
 /** Rank indicator for top 3 positions */
@@ -132,7 +120,7 @@ export function Leaderboard({
     setExpandedDeveloper(null);
   }, []);
 
-  const handleRowClick = useCallback((developerName: string) => {
+  const toggleExpand = useCallback((developerName: string) => {
     setExpandedDeveloper((prev) =>
       prev === developerName ? null : developerName
     );
@@ -142,10 +130,10 @@ export function Leaderboard({
     (e: React.KeyboardEvent, developerName: string) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        handleRowClick(developerName);
+        onSelectDeveloper?.(developerName);
       }
     },
-    [handleRowClick]
+    [onSelectDeveloper]
   );
 
   const sortedDevelopers = useMemo(() => {
@@ -178,12 +166,13 @@ export function Leaderboard({
             Leaderboard
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Ranked by {sortKey === "dxi_score" ? "overall DXI score" : DIMENSION_CONFIGS[sortKey as keyof typeof DIMENSION_CONFIGS].label.toLowerCase()}
+            Ranked by {getSortLabel(sortKey)}
           </p>
         </div>
         <div className="flex items-center rounded-lg bg-muted p-0.5 gap-0.5">
           {sortButtons.map(({ key, label }) => (
             <button
+              type="button"
               key={key}
               onClick={() => handleSortChange(key)}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
@@ -230,7 +219,7 @@ export function Leaderboard({
                 const rows = [
                   <motion.tr
                     key={dev.developer}
-                    layout
+                    layout="position"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -240,28 +229,18 @@ export function Leaderboard({
                         ? "bg-muted/40"
                         : "hover:bg-muted/50"
                     }`}
-                    onClick={() => handleRowClick(dev.developer)}
+                    onClick={() => onSelectDeveloper?.(dev.developer)}
                     onKeyDown={(e) => handleRowKeyDown(e, dev.developer)}
                     tabIndex={0}
                     role="row"
-                    aria-expanded={isExpanded}
                   >
                     <TableCell className="pl-6">
                       <RankCell rank={rank} />
                     </TableCell>
                     <TableCell>
-                      <button
-                        className="text-left font-medium text-foreground hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm transition-colors group/name"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectDeveloper?.(dev.developer);
-                        }}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {dev.developer}
-                          <ArrowUpRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
-                        </span>
-                      </button>
+                      <span className="font-medium text-foreground">
+                        {dev.developer}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       <span
@@ -276,16 +255,26 @@ export function Leaderboard({
                         className={`text-center text-sm tabular-nums ${getScoreColorClass(dev.dimension_scores[key])}`}
                       >
                         {DIMENSION_CONFIGS[key].formatRawValue(
-                          getRawValue(dev, key)
+                          getRawValueForDimension(key, dev)
                         )}
                       </TableCell>
                     ))}
                     <TableCell className="pr-4">
-                      <ChevronDown
-                        className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-200 ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(dev.developer);
+                        }}
+                        className="p-1 rounded hover:bg-muted transition-colors"
+                        aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-200 ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
                     </TableCell>
                   </motion.tr>,
                 ];
@@ -294,13 +283,13 @@ export function Leaderboard({
                   rows.push(
                     <motion.tr
                       key={`${dev.developer}-detail`}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
                       className="border-b bg-muted/20"
                     >
-                      <td colSpan={9} className="px-6 py-4">
+                      <td colSpan={TOTAL_COLUMNS} className="px-6 py-4">
                         <div className="grid grid-cols-3 gap-4 max-w-md">
                           <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5">
                             <GitPullRequest className="h-4 w-4 text-muted-foreground" />
@@ -322,7 +311,7 @@ export function Leaderboard({
                             </div>
                           </div>
                           <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5">
-                            <span className="text-sm">+</span>
+                            <Plus className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Added / Deleted</p>
                               <p className="text-sm font-medium tabular-nums">
