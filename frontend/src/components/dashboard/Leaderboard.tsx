@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,15 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { ChevronRight } from "lucide-react";
+import {
+  Trophy,
+  Medal,
+  ChevronDown,
+  GitPullRequest,
+  FileCode,
+  ArrowUpRight,
+} from "lucide-react";
 import { ColumnTooltip } from "./components/ColumnTooltip";
 import {
   DIMENSION_CONFIGS,
   LEADERBOARD_TOOLTIPS,
   getScoreColorClass,
 } from "./components/dimension-config";
-import type { DeveloperMetrics, SortKey, DimensionScores } from "@/types/metrics";
+import type {
+  DeveloperMetrics,
+  SortKey,
+  DimensionScores,
+} from "@/types/metrics";
 
 interface LeaderboardProps {
   developers: DeveloperMetrics[];
@@ -28,7 +37,7 @@ interface LeaderboardProps {
 }
 
 const sortButtons: { key: SortKey; label: string }[] = [
-  { key: "dxi_score", label: "DXI" },
+  { key: "dxi_score", label: "Overall" },
   { key: "review_speed", label: DIMENSION_CONFIGS.review_speed.label },
   { key: "cycle_time", label: DIMENSION_CONFIGS.cycle_time.label },
   { key: "pr_size", label: DIMENSION_CONFIGS.pr_size.label },
@@ -44,10 +53,13 @@ const dimensionColumns: { key: keyof DimensionScores; label: string }[] = [
   { key: "commit_frequency", label: DIMENSION_CONFIGS.commit_frequency.label },
 ];
 
-function getDxiBadgeVariant(score: number): "default" | "secondary" | "destructive" {
-  if (score >= 70) return "default";
-  if (score >= 50) return "secondary";
-  return "destructive";
+/** Returns a tailwind class string for the DXI score pill */
+function getDxiScoreClasses(score: number): string {
+  if (score >= 70)
+    return "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20";
+  if (score >= 50)
+    return "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20";
+  return "bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20";
 }
 
 function getScoreValue(dev: DeveloperMetrics, key: SortKey): number {
@@ -56,7 +68,10 @@ function getScoreValue(dev: DeveloperMetrics, key: SortKey): number {
 }
 
 /** Extract the raw value for a dimension from a developer's metrics */
-function getRawValue(dev: DeveloperMetrics, key: keyof DimensionScores): number | null {
+function getRawValue(
+  dev: DeveloperMetrics,
+  key: keyof DimensionScores
+): number | null {
   switch (key) {
     case "review_speed":
       return dev.avg_review_time_hours;
@@ -73,9 +88,44 @@ function getRawValue(dev: DeveloperMetrics, key: keyof DimensionScores): number 
   }
 }
 
-export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps) {
+/** Rank indicator for top 3 positions */
+function RankCell({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-amber-100 dark:bg-amber-500/15">
+        <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-500/15">
+        <Medal className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-orange-100 dark:bg-orange-500/15">
+        <Medal className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center justify-center h-7 w-7 text-sm text-muted-foreground tabular-nums">
+      {rank}
+    </span>
+  );
+}
+
+export function Leaderboard({
+  developers,
+  onSelectDeveloper,
+}: LeaderboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>("dxi_score");
-  const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
+  const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(
+    null
+  );
 
   const handleSortChange = useCallback((key: SortKey) => {
     setSortKey(key);
@@ -83,7 +133,9 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
   }, []);
 
   const handleRowClick = useCallback((developerName: string) => {
-    setExpandedDeveloper((prev) => (prev === developerName ? null : developerName));
+    setExpandedDeveloper((prev) =>
+      prev === developerName ? null : developerName
+    );
   }, []);
 
   const handleRowKeyDown = useCallback(
@@ -106,10 +158,13 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Developer Leaderboard</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Leaderboard
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-[200px] text-muted-foreground">
-          No data available
+        <CardContent className="flex flex-col items-center justify-center h-[200px] gap-2 text-muted-foreground">
+          <Trophy className="h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm">No sprint data yet</p>
         </CardContent>
       </Card>
     );
@@ -117,30 +172,40 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Developer Leaderboard</CardTitle>
-        <div className="flex gap-1 flex-wrap">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className="space-y-1">
+          <CardTitle className="text-base font-semibold">
+            Leaderboard
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Ranked by {sortKey === "dxi_score" ? "overall DXI score" : DIMENSION_CONFIGS[sortKey as keyof typeof DIMENSION_CONFIGS].label.toLowerCase()}
+          </p>
+        </div>
+        <div className="flex items-center rounded-lg bg-muted p-0.5 gap-0.5">
           {sortButtons.map(({ key, label }) => (
-            <Button
+            <button
               key={key}
-              variant={sortKey === key ? "default" : "outline"}
-              size="sm"
               onClick={() => handleSortChange(key)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                sortKey === key
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               {label}
-            </Button>
+            </button>
           ))}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">#</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-14 pl-6">Rank</TableHead>
               <TableHead>Developer</TableHead>
               <TableHead className="text-center">
                 <ColumnTooltip
-                  label="DXI Score"
+                  label="DXI"
                   tooltip={LEADERBOARD_TOOLTIPS.dxi_score}
                 />
               </TableHead>
@@ -152,12 +217,14 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
                   />
                 </TableHead>
               ))}
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             <AnimatePresence mode="popLayout">
               {sortedDevelopers.flatMap((dev, index) => {
                 const isExpanded = expandedDeveloper === dev.developer;
+                const rank = index + 1;
                 const lines = dev.lines_added + dev.lines_deleted;
 
                 const rows = [
@@ -167,62 +234,107 @@ export function Leaderboard({ developers, onSelectDeveloper }: LeaderboardProps)
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                    transition={{ duration: 0.25 }}
+                    className={`border-b transition-colors cursor-pointer group ${
+                      isExpanded
+                        ? "bg-muted/40"
+                        : "hover:bg-muted/50"
+                    }`}
                     onClick={() => handleRowClick(dev.developer)}
                     onKeyDown={(e) => handleRowKeyDown(e, dev.developer)}
                     tabIndex={0}
                     role="row"
                     aria-expanded={isExpanded}
                   >
-                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell className="pl-6">
+                      <RankCell rank={rank} />
+                    </TableCell>
                     <TableCell>
                       <button
-                        className="text-left font-medium hover:underline focus:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                        className="text-left font-medium text-foreground hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm transition-colors group/name"
                         onClick={(e) => {
                           e.stopPropagation();
                           onSelectDeveloper?.(dev.developer);
                         }}
                       >
-                        {dev.developer}
+                        <span className="flex items-center gap-1.5">
+                          {dev.developer}
+                          <ArrowUpRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                        </span>
                       </button>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={getDxiBadgeVariant(dev.dxi_score)}>
+                      <span
+                        className={`inline-flex items-center justify-center rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset tabular-nums ${getDxiScoreClasses(dev.dxi_score)}`}
+                      >
                         {dev.dxi_score.toFixed(0)}
-                      </Badge>
+                      </span>
                     </TableCell>
                     {dimensionColumns.map(({ key }) => (
                       <TableCell
                         key={key}
-                        className={`text-center tabular-nums ${getScoreColorClass(dev.dimension_scores[key])}`}
+                        className={`text-center text-sm tabular-nums ${getScoreColorClass(dev.dimension_scores[key])}`}
                       >
-                        {DIMENSION_CONFIGS[key].formatRawValue(getRawValue(dev, key))}
+                        {DIMENSION_CONFIGS[key].formatRawValue(
+                          getRawValue(dev, key)
+                        )}
                       </TableCell>
                     ))}
+                    <TableCell className="pr-4">
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      />
+                    </TableCell>
                   </motion.tr>,
                 ];
 
                 if (isExpanded) {
                   rows.push(
-                    <tr key={`${dev.developer}-detail`} className="border-b bg-muted/30">
-                      <td colSpan={8} className="px-6 py-3">
-                        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-                          <ChevronRight className="h-3 w-3" />
-                          <span className="font-medium uppercase tracking-wide">Additional Metrics</span>
-                        </div>
-                        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium text-foreground/80">PRs:</span>{" "}
-                            {dev.prs_merged}/{dev.prs_opened} merged
+                    <motion.tr
+                      key={`${dev.developer}-detail`}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="border-b bg-muted/20"
+                    >
+                      <td colSpan={9} className="px-6 py-4">
+                        <div className="grid grid-cols-3 gap-4 max-w-md">
+                          <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5">
+                            <GitPullRequest className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Pull requests</p>
+                              <p className="text-sm font-medium tabular-nums">
+                                {dev.prs_merged}
+                                <span className="text-muted-foreground font-normal">/{dev.prs_opened} merged</span>
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-medium text-foreground/80">Lines Changed:</span>{" "}
-                            {lines.toLocaleString()}
+                          <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5">
+                            <FileCode className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Lines changed</p>
+                              <p className="text-sm font-medium tabular-nums">
+                                {lines.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5">
+                            <span className="text-sm">+</span>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Added / Deleted</p>
+                              <p className="text-sm font-medium tabular-nums">
+                                <span className="text-emerald-600 dark:text-emerald-400">+{dev.lines_added.toLocaleString()}</span>
+                                {" / "}
+                                <span className="text-rose-600 dark:text-rose-400">-{dev.lines_deleted.toLocaleString()}</span>
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 }
 
