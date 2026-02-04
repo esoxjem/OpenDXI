@@ -1,0 +1,17 @@
+# Test fixtures for TeamMembership model
+
+alice_backend:
+  developer: alice_dev
+  team: backend
+
+bob_backend:
+  developer: bob_dev
+  team: backend
+
+alice_frontend:
+  developer: alice_dev
+  team: frontend_team
+
+charlie_frontend:
+  developer: charlie_dev
+  team: frontend_team
