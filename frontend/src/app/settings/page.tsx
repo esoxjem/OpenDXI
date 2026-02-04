@@ -1,8 +1,11 @@
 /**
- * Settings page for user management.
+ * Settings page for user, developer, and team management.
  *
  * Only accessible to users with owner role.
- * Allows adding users by GitHub handle, removing users, and changing roles.
+ * Sections:
+ *   - Users: add/remove users, change roles
+ *   - Developers: sync from GitHub, toggle visibility on dashboard
+ *   - Teams: create/edit/delete teams, manage memberships
  */
 
 "use client";
@@ -43,6 +46,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, Loader2, ArrowLeft } from "lucide-react";
+import { DeveloperManagement } from "./_components/DeveloperManagement";
+import { TeamManagement } from "./_components/TeamManagement";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -247,6 +252,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
       </div>
 
+      {/* ─── Users Section ──────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Users</h2>
@@ -373,7 +379,13 @@ export default function SettingsPage() {
         )}
       </section>
 
-      {/* Delete Confirmation Dialog */}
+      {/* ─── Developers Section ─────────────────────────────────────────── */}
+      <DeveloperManagement />
+
+      {/* ─── Teams Section ──────────────────────────────────────────────── */}
+      <TeamManagement />
+
+      {/* Delete User Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

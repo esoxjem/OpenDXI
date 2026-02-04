@@ -10,7 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_03_055834) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_04_090958) do
+  create_table "developers", force: :cascade do |t|
+    t.string "avatar_url"
+    t.datetime "created_at", null: false
+    t.bigint "github_id", null: false
+    t.string "github_login", null: false
+    t.string "name"
+    t.string "source", default: "org_member", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "visible", default: true, null: false
+    t.index ["github_id"], name: "index_developers_on_github_id", unique: true
+    t.index ["github_login"], name: "index_developers_on_github_login", unique: true
+    t.index ["visible"], name: "index_developers_on_visible"
+  end
+
   create_table "job_statuses", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "error"
@@ -32,6 +46,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_03_055834) do
     t.index ["start_date", "end_date"], name: "index_sprints_on_dates_unique", unique: true
     t.index ["start_date"], name: "index_sprints_on_start_date"
     t.index ["updated_at"], name: "index_sprints_on_updated_at"
+  end
+
+  create_table "team_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "developer_id", null: false
+    t.integer "team_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["developer_id"], name: "index_team_memberships_on_developer_id"
+    t.index ["team_id", "developer_id"], name: "index_team_memberships_on_team_and_developer", unique: true
+    t.index ["team_id"], name: "index_team_memberships_on_team_id"
+  end
+
+  create_table "teams", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "github_team_id"
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.string "source", default: "custom", null: false
+    t.boolean "synced", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.index ["github_team_id"], name: "index_teams_on_github_team_id", unique: true
+    t.index ["slug"], name: "index_teams_on_slug", unique: true
   end
 
   create_table "users", force: :cascade do |t|

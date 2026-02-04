@@ -43,11 +43,18 @@ export interface MetricsSummary {
   avg_dxi_score: number;
 }
 
+export interface FilterMeta {
+  total_developers: number;
+  showing_developers: number;
+  team_name?: string;
+}
+
 export interface MetricsResponse {
   developers: DeveloperMetrics[];
   daily: DailyActivity[];
   summary: MetricsSummary;
   team_dimension_scores: DimensionScores;
+  filter_meta?: FilterMeta;
 }
 
 export interface Sprint {
