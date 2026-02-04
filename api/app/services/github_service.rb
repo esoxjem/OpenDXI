@@ -167,6 +167,37 @@ class GithubService
       }
     end
 
+    # Fetches all members of the configured GitHub organization via REST API.
+    # Handles pagination (100 per page).
+    #
+    # @return [Array<Hash>] List of member hashes with :github_id, :login, :avatar_url
+    # @raise [GitHubApiError] on API errors
+    def fetch_org_members
+      validate_github_org!
+      fetch_rest_paginated("orgs/#{config.github_org}/members")
+    end
+
+    # Fetches all teams in the configured GitHub organization via REST API.
+    # Returns a flat list regardless of nesting hierarchy.
+    #
+    # @return [Array<Hash>] List of team hashes with id, name, slug, members_url
+    # @raise [GitHubApiError] on API errors
+    def fetch_org_teams
+      validate_github_org!
+      fetch_rest_paginated("orgs/#{config.github_org}/teams")
+    end
+
+    # Fetches members of a specific GitHub team.
+    #
+    # @param org [String] Organization name
+    # @param team_slug [String] Team slug
+    # @return [Array<Hash>] List of member hashes
+    # @raise [GitHubApiError] on API errors
+    def fetch_team_members(team_slug)
+      validate_github_org!
+      fetch_rest_paginated("orgs/#{config.github_org}/teams/#{team_slug}/members")
+    end
+
     # Fetches a GitHub user by login (username) via REST API.
     #
     # @param login [String] GitHub username
@@ -211,6 +242,73 @@ class GithubService
         f.options.timeout = 30
         f.options.open_timeout = 10
       end
+    end
+
+    # Fetches all pages of a REST API endpoint.
+    # GitHub REST pagination uses the Link header with rel="next".
+    #
+    # @param path [String] API path (e.g., "orgs/myorg/members")
+    # @param max_pages [Integer] Safety limit for pagination
+    # @return [Array<Hash>] All items across all pages
+    def fetch_rest_paginated(path, max_pages: 20)
+      all_items = []
+      url = path
+      pages_fetched = 0
+
+      while url && pages_fetched < max_pages
+        response = rest_connection.get(url) do |req|
+          req.params["per_page"] = 100 if pages_fetched.zero?
+        end
+
+        handle_rest_error(response) unless response.status == 200
+
+        items = JSON.parse(response.body)
+        all_items.concat(items)
+
+        # Parse Link header for next page
+        url = parse_next_link(response.headers["Link"])
+        pages_fetched += 1
+      end
+
+      all_items
+    rescue Faraday::Error => e
+      raise GitHubApiError, "Connection failed: #{e.message}"
+    end
+
+    def handle_rest_error(response)
+      case response.status
+      when 401
+        raise AuthenticationError, "GitHub authentication failed. Check GH_TOKEN."
+      when 403
+        if response.headers["X-RateLimit-Remaining"] == "0"
+          raise RateLimitExceeded, "GitHub API rate limit exceeded"
+        else
+          raise AuthenticationError, "GitHub API permission denied. Ensure GH_TOKEN has 'read:org' scope."
+        end
+      when 404
+        raise GitHubApiError, "GitHub resource not found: #{response.status}"
+      when 429
+        raise RateLimitExceeded, "GitHub API rate limit exceeded"
+      else
+        raise GitHubApiError, "GitHub API error: #{response.status}"
+      end
+    end
+
+    # Parses the GitHub Link header to extract the next page URL.
+    # Format: <https://api.github.com/...?page=2>; rel="next", <...>; rel="last"
+    #
+    # @param link_header [String, nil] The Link header value
+    # @return [String, nil] The next page URL or nil
+    def parse_next_link(link_header)
+      return nil unless link_header
+
+      link_header.split(",").each do |part|
+        if part.include?('rel="next"')
+          return part.match(/<([^>]+)>/)[1]
+        end
+      end
+
+      nil
     end
 
     def config

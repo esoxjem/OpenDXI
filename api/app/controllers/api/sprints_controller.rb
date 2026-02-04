@@ -25,17 +25,20 @@ module Api
     #
     # Returns full metrics for a specific sprint.
     # Supports force_refresh=true query param to bypass cache.
+    # Supports ?team=slug to filter by team membership.
     #
     # HTTP Caching:
     # - Returns 304 Not Modified if client ETag matches (bandwidth optimization)
     # - Always returns 200 OK when force_refresh=true (bypass cache)
     # - Sets cache headers for browser and CDN caching
+    # - ETag incorporates filter params (different filters = different ETags)
     def metrics
       start_date = Date.parse(params[:start_date])
       end_date = Date.parse(params[:end_date])
       force_refresh = params[:force_refresh] == "true"
 
       sprint = Sprint.find_or_fetch!(start_date, end_date, force: force_refresh)
+      filters = resolve_filters
 
       # Set cache headers for browser/CDN
       response.cache_control[:public] = true
@@ -43,11 +46,11 @@ module Api
 
       # If force_refresh, always return full response (bypass ETag check)
       if force_refresh
-        return render json: MetricsResponseSerializer.new(sprint).as_json
+        return render json: MetricsResponseSerializer.new(sprint, **filters).as_json
       end
 
-      # Generate ETag based on content hash
-      etag = sprint.generate_cache_key
+      # Generate ETag based on content hash + filter params
+      etag = generate_filtered_cache_key(sprint, filters)
 
       # Check if client has matching ETag in If-None-Match header
       if request.headers["If-None-Match"] == "\"#{etag}\""
@@ -57,7 +60,7 @@ module Api
 
       # Return full response with ETag header
       response.set_header("ETag", "\"#{etag}\"")
-      render json: MetricsResponseSerializer.new(sprint).as_json
+      render json: MetricsResponseSerializer.new(sprint, **filters).as_json
     end
 
     # GET /api/sprints/history
@@ -65,17 +68,52 @@ module Api
     # Returns historical DXI scores across multiple sprints for trend analysis.
     # Sprints are ordered chronologically (oldest first) for proper trend display.
     # Supports count query param (default: 6, max: 12).
+    # Supports ?team=slug to filter by team membership.
     def history
       count = (params[:count] || 6).to_i.clamp(1, 12)
       # Order ascending so trends show oldest→newest (left→right on charts)
       sprints = Sprint.order(start_date: :desc).limit(count).reverse
+      filters = resolve_filters.except(:team_name)
 
       render json: {
-        sprints: sprints.map { |s| SprintHistorySerializer.new(s).as_json }
+        sprints: sprints.map { |s| SprintHistorySerializer.new(s, **filters).as_json }
       }
     end
 
     private
+
+    # Resolves visibility and team filter params into serializer kwargs.
+    # Returns empty hash when no filters are active (backwards compatible).
+    def resolve_filters
+      filters = {}
+
+      # Always apply visibility filtering when Developer records exist
+      if Developer.exists?
+        filters[:visible_logins] = Developer.visible_logins
+      end
+
+      # Apply team filter if ?team=slug is present
+      if params[:team].present?
+        team = Team.find_by(slug: params[:team])
+        if team
+          filters[:team_logins] = team.developers.visible.pluck(:github_login)
+          filters[:team_name] = team.name
+        end
+      end
+
+      filters
+    end
+
+    # Generates an ETag that accounts for filter params.
+    # Different filters produce different ETags so cached responses
+    # don't serve stale filtered/unfiltered data.
+    def generate_filtered_cache_key(sprint, filters)
+      base_key = sprint.generate_cache_key
+      return base_key if filters.empty?
+
+      filter_key = Digest::SHA256.hexdigest(filters.except(:team_name).to_json)
+      "#{base_key}-#{filter_key[0..7]}"
+    end
 
     def force_refresh_rate_limited
       render json: {
