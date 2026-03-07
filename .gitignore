@@ -41,6 +41,7 @@ build/
 # Codex
 .codex
 .agents
+AGENTS.md
 
 # User-specific scripts
 bin/setup-oauth
