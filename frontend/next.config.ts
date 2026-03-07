@@ -3,10 +3,12 @@ import type { NextConfig } from "next";
 // Get API URL for CSP - must be known at build time
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const apiOrigin = new URL(apiUrl).origin;
+const allowedDevOrigins = ["localhost", "127.0.0.1"];
 
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false, // Security: Remove X-Powered-By header
+  allowedDevOrigins,
 
   // Security headers
   async headers() {
