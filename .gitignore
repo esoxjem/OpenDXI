@@ -38,13 +38,9 @@ build/
 .env
 .env.local
 
-# Claude Code
-.claude
-.mcp.json
-CLAUDE.md
-todos/
-.worktrees
-plans/
+# Codex
+.codex
+.agents
 
 # User-specific scripts
 bin/setup-oauth
