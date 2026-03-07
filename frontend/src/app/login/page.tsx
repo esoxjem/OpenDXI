@@ -29,7 +29,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 function LoginContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, statusMessage } = useAuth();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
@@ -48,7 +48,7 @@ function LoginContent() {
   const errorMessage = error ? ERROR_MESSAGES[error] || ERROR_MESSAGES.unknown_error : null;
 
   if (isLoading) {
-    return <LoginSkeleton />;
+    return <LoginSkeleton message={statusMessage} />;
   }
 
   return (
@@ -82,10 +82,15 @@ function LoginContent() {
   );
 }
 
-function LoginSkeleton() {
+function LoginSkeleton({ message = "Checking GitHub sign-in status..." }: { message?: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <p className="text-sm text-muted-foreground">
+          {message}
+        </p>
+      </div>
     </div>
   );
 }

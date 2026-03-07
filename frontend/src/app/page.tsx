@@ -37,7 +37,12 @@ import { UserMenu } from "@/components/layout/UserMenu";
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    authState,
+    statusMessage,
+  } = useAuth();
 
   // URL params (not hooks, just reading from searchParams)
   const sprintParam = searchParams.get("sprint");
@@ -115,17 +120,28 @@ function DashboardContent() {
 
   // Redirect to login if not authenticated (using useEffect to avoid render-time side effects)
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && authState === "sign_in_required" && !isAuthenticated) {
       window.location.href = "/login";
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, authState, isAuthenticated]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // END OF HOOKS - Conditional returns below are safe now
   // ═══════════════════════════════════════════════════════════════════════════
 
   // Auth loading state
-  if (authLoading) return <DashboardSkeleton />;
+  if (authLoading) {
+    return (
+      <div className="space-y-6">
+        <LoadingMessage
+          message={statusMessage}
+          className="justify-start py-0 text-sm"
+          testId="loading-auth-status"
+        />
+        <DashboardSkeleton />
+      </div>
+    );
+  }
 
   // Not authenticated - show loading while redirecting
   if (!isAuthenticated) {

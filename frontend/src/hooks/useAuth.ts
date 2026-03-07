@@ -10,10 +10,18 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkAuthStatus, logout as apiLogout, AuthUser } from "@/lib/api";
 
+export type AuthState =
+  | "checking"
+  | "server_unreachable"
+  | "authenticated"
+  | "sign_in_required";
+
 interface UseAuthResult {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authState: AuthState;
+  statusMessage: string;
   error: string | null;
   logout: () => Promise<void>;
 }
@@ -32,9 +40,25 @@ export function useAuth(): UseAuthResult {
     queryKey: ["auth"],
     queryFn: checkAuthStatus,
     retry: false,
+    refetchInterval: (query) => query.state.error ? 2000 : false,
     staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
     gcTime: 30 * 60 * 1000,   // 30 minutes - keep in cache longer
   });
+
+  const authState: AuthState = data?.authenticated
+    ? "authenticated"
+    : data
+      ? "sign_in_required"
+      : error
+        ? "server_unreachable"
+        : "checking";
+
+  const statusMessage = {
+    checking: "Checking GitHub sign-in status...",
+    server_unreachable: "Waiting for the local server...",
+    authenticated: "Signed in.",
+    sign_in_required: "GitHub sign-in required.",
+  }[authState];
 
   const logout = async () => {
     try {
@@ -50,8 +74,10 @@ export function useAuth(): UseAuthResult {
 
   return {
     user: data?.user ?? null,
-    isLoading,
+    isLoading: isLoading || authState === "server_unreachable",
     isAuthenticated: data?.authenticated ?? false,
+    authState,
+    statusMessage,
     error: error instanceof Error ? error.message : null,
     logout,
   };
